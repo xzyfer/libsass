@@ -92,7 +92,7 @@ namespace Sass {
         if((p = escape(src))) {
           src = p;
           continue;
-        } 
+        }
         else if((p = exactly<'"'>(src))) {
           return p;
         }
@@ -111,7 +111,7 @@ namespace Sass {
         if((p = escape(src))) {
           src = p;
           continue;
-        } 
+        }
         else if((p = exactly<'\''>(src))) {
           return p;
         }
@@ -322,7 +322,7 @@ namespace Sass {
     }
     // Attribute name in an attribute selector.
     const char* attribute_name(const char* src) {
-      return alternatives< sequence< optional<namespace_prefix>, identifier>, 
+      return alternatives< sequence< optional<namespace_prefix>, identifier>,
                            identifier >(src);
     }
     // match placeholder selectors
@@ -460,6 +460,9 @@ namespace Sass {
     }
     const char* ancestor_of(const char* src) {
       return sequence< spaces, negate< exactly<'{'> > >(src);
+    }
+    const char* deep_combinator(const char* src) {
+      return sequence< optional_spaces, exactly<deep_combinator_kwd> >(src);
     }
 
     // Match SCSS variable names.

@@ -86,7 +86,7 @@ namespace Sass {
       }
       return;
     }
-    
+
     ctx->source_map.add_mapping(m);
     append_singleline_part_to_buffer("@media ");
     q->perform(this);
@@ -104,9 +104,9 @@ namespace Sass {
           stm->perform(this);
         }
       }
-      
+
       append_singleline_part_to_buffer("}");
-      
+
       for (size_t i = 0, L = b->length(); i < L; ++i) {
         Statement* stm = (*b)[i];
         if (stm->is_hoistable()) {
@@ -273,7 +273,7 @@ namespace Sass {
     {
       tail->perform(this);
       return;
-    } 
+    }
     if (head && !head->is_empty_reference()) head->perform(this);
     switch (comb) {
       case Complex_Selector::ANCESTOR_OF:
@@ -290,6 +290,9 @@ namespace Sass {
         break;
       case Complex_Selector::ADJACENT_TO:
         append_singleline_part_to_buffer("+");
+        break;
+      case Complex_Selector::DEEP:
+        append_singleline_part_to_buffer("/deep/");
         break;
     }
     if (tail) tail->perform(this);
