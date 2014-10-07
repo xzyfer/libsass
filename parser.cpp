@@ -13,6 +13,9 @@
 
 #include <typeinfo>
 
+// #define DEBUG true
+#include "debug.hpp"
+
 namespace Sass {
   using namespace std;
   using namespace Constants;
@@ -63,7 +66,7 @@ namespace Sass {
       }
       else if (peek< variable >()) {
         (*root) << parse_assignment();
-        if (!lex< exactly<';'> >()) error("top-level variable binding must be terminated by ';'");
+        if (!lex< exactly<';'> >()) { DEBUG_PRINTLN(ALL, "lexed => " << lexed.to_string()); error("top-level variable binding must be terminated by ';'"); }
       }
       else if (peek< sequence< optional< exactly<'*'> >, alternatives< identifier_schema, identifier >, optional_spaces, exactly<':'>, optional_spaces, exactly<'{'> > >(position)) {
         (*root) << parse_propset();
@@ -269,7 +272,9 @@ namespace Sass {
     string name(Util::normalize_underscores(lexed));
     Position var_source_position = source_position;
     if (!lex< exactly<':'> >()) error("expected ':' after " + name + " in assignment statement");
-    Expression* val = parse_list();
+    DEBUG_PRINTLN(ALL, "enter parse_assignment");
+    Expression* val = parse_map();
+    DEBUG_PRINTLN(ALL, "exit parse_assignment");
     val->is_delayed(false);
     bool is_guarded = lex< default_flag >();
     bool is_global = lex< global_flag >();
@@ -589,14 +594,14 @@ namespace Sass {
     bool semicolon = false;
     Selector_Lookahead lookahead_result;
     Block* block = new (ctx.mem) Block(path, source_position);
-    
-    // JMA - ensure that a block containing only block_comments is parsed 
+
+    // JMA - ensure that a block containing only block_comments is parsed
     while (lex< block_comment >()) {
       String*  contents = parse_interpolated_chunk(lexed);
       Comment* comment  = new (ctx.mem) Comment(path, source_position, contents);
       (*block) << comment;
     }
-    
+
     while (!lex< exactly<'}'> >()) {
       if (semicolon) {
         if (!lex< exactly<';'> >()) {
@@ -754,27 +759,51 @@ namespace Sass {
     return new (ctx.mem) Declaration(path, prop->position(), prop, list/*, lex<important>()*/);
   }
 
+  string p = "  ";
+  string pp = "";
+
   Expression* Parser::parse_map()
   {
-    if (peek< exactly<')'> >(position))
-    { return new (ctx.mem) List(path, source_position, 0); }
+    pp += p;
+    DEBUG_PRINTLN(ALL, "" << pp << "enter map_parse");
+    if (!(lex< exactly<'('> >()))
+    {
+      DEBUG_PRINTLN(ALL, "" << pp << "map doesn't start with a ( so it must be a list");
+      pp.erase(pp.end() - 2, pp.end());
+      return parse_list();
+    }
 
-    Expression* key = parse_list();
+    DEBUG_PRINTLN(ALL, "" << pp << "lexed opening => " << lexed.to_string());
+
+    // if (peek< exactly<')'> >(position))
+    // { return new (ctx.mem) List(path, source_position, 0); }
+
+    DEBUG_PRINTLN(ALL, "" << pp << "try to parse map key");
+    Expression* key = parse_map();
+    DEBUG_PRINTLN(ALL, "" << pp << "key => " << lexed.to_string());
 
     // if it's not a map treat it like a list
-    if (!(peek< exactly<':'> >(position)))
-    { return key; }
-
-    // consume the ':'
-    lex< exactly<':'> >();
-
-    Expression* value;
-    if (peek< exactly<'('> >(position))
+    if (!(lex< exactly<':'> >()))
     {
-      value = parse_comma_list();
-    } else {
-      value = parse_space_list();
-    }
+      DEBUG_PRINTLN(ALL, "" << pp << "key isn't followed by a : so return key as a list value");
+      if (!(lex< exactly<')'> >()))
+      {
+        DEBUG_PRINTLN(ALL, "map doesn't end with a ) so we throw an error");
+        error("unclosed parenthesis 2"); }
+
+      DEBUG_PRINTLN(ALL, "" << pp << "lexed closing => " << lexed.to_string());
+      pp.erase(pp.end() - 2, pp.end());
+      return key; }
+
+    DEBUG_PRINTLN(ALL, "" << pp << " found a : so we try to parse map value");
+    Expression* value = parse_map();
+    DEBUG_PRINTLN(ALL, "" << pp << "value => " << lexed.to_string());
+    // if (peek< exactly<'('> >(position))
+    // {
+    //   value = parse_comma_list();
+    // } else {
+    //   value = parse_space_list();
+    // }
 
     KeyValuePair* pair = new (ctx.mem) KeyValuePair(path, source_position, key, value);
 
@@ -783,28 +812,41 @@ namespace Sass {
 
     while (lex< exactly<','> >())
     {
+      DEBUG_PRINTLN(ALL, "" << pp << "found another map item");
       // allow trailing commas - #495
       if (peek< exactly<')'> >(position))
       { break; }
 
-      Expression* key = parse_list();
+      Expression* key = parse_map();
+      DEBUG_PRINTLN(ALL, "" << pp << "key => " << lexed.to_string());
+
       // if it's not a map treat it like a list
-      if (!(peek< exactly<':'> >(position)))
-      { error("invalid syntax"); }
-
-      // consume the ':'
-      lex< exactly<':'> >();
-
-      Expression* value;
-      if (peek< exactly<'('> >(position))
+      if (!(lex< exactly<':'> >()))
       {
-        value = parse_comma_list();
-      } else {
-        value = parse_space_list();
-      }
+        DEBUG_PRINTLN(ALL, "" << pp << "key isn't followed by a : now it's a syntax error");
+        error("invalid syntax"); }
+
+      Expression* value = parse_map();
+      DEBUG_PRINTLN(ALL, "" << pp << "value => " << lexed.to_string());
+      // if (peek< exactly<'('> >(position))
+      // {
+      //   value = parse_comma_list();
+      // } else {
+      //   value = parse_space_list();
+      // }
 
       (*map) << new (ctx.mem) KeyValuePair(path, source_position, key, value);
     }
+
+    if (!(lex< exactly<')'> >()))
+    {
+      DEBUG_PRINTLN(ALL, "map doesn't end with a ) so we throw an error");
+      error("unclosed parenthesis 2"); }
+
+    DEBUG_PRINTLN(ALL, "" << pp << "lexed closing => " << lexed.to_string());
+
+    DEBUG_PRINTLN(ALL, "" << pp << "exit parse_map");
+    pp.erase(pp.end() - 2, pp.end());
 
     return map;
   }
@@ -816,6 +858,8 @@ namespace Sass {
 
   Expression* Parser::parse_comma_list()
   {
+    pp += p;
+    DEBUG_PRINTLN(ALL, "" << pp << "enter parse_comma_list");
     if (//peek< exactly<'!'> >(position) ||
         peek< exactly<';'> >(position) ||
         peek< exactly<'}'> >(position) ||
@@ -823,16 +867,25 @@ namespace Sass {
         peek< exactly<')'> >(position) ||
         //peek< exactly<':'> >(position) ||
         peek< exactly<ellipsis> >(position))
-    { return new (ctx.mem) List(path, source_position, 0); }
+    {
+      DEBUG_PRINTLN(ALL, "" << pp << "encounted an ;, }, {, or ) so return an empty list");
+      pp.erase(pp.end() - 2, pp.end());
+      return new (ctx.mem) List(path, source_position, 0); }
     Expression* list1 = parse_space_list();
+    DEBUG_PRINTLN(ALL, "" << pp << "first list item => " << lexed.to_string());
     // if it's a singleton, return it directly; don't wrap it
-    if (!peek< exactly<','> >(position)) return list1;
+    if (!peek< exactly<','> >(position)) {
+      DEBUG_PRINTLN(ALL, "" << pp << "list item not followed by comma so return the first item");
+      pp.erase(pp.end() - 2, pp.end());
+      return list1;
+    }
 
     List* comma_list = new (ctx.mem) List(path, source_position, 2, List::COMMA);
     (*comma_list) << list1;
 
     while (lex< exactly<','> >())
     {
+      DEBUG_PRINTLN(ALL, "" << pp << "found another list item");
       if (//peek< exactly<'!'> >(position) ||
           peek< exactly<';'> >(position) ||
           peek< exactly<'}'> >(position) ||
@@ -840,18 +893,25 @@ namespace Sass {
           peek< exactly<')'> >(position) ||
           //peek< exactly<':'> >(position) ||
           peek< exactly<ellipsis> >(position)) {
+        DEBUG_PRINTLN(ALL, "" << pp << "encounted an ;, }, {, or ) so return the current list");
         break;
       }
       Expression* list = parse_space_list();
       (*comma_list) << list;
+      DEBUG_PRINTLN(ALL, "" << pp << "list item => " << lexed.to_string());
     }
 
+    DEBUG_PRINTLN(ALL, "" << pp << "exit parse_comma_list");
+    pp.erase(pp.end() - 2, pp.end());
     return comma_list;
   }
 
   Expression* Parser::parse_space_list()
   {
+    pp += p;
+    DEBUG_PRINTLN(ALL, "" << pp << "enter parse_space_list");
     Expression* disj1 = parse_disjunction();
+    DEBUG_PRINTLN(ALL, "" << pp << "first list item => " << lexed.to_string());
     // if it's a singleton, return it directly; don't wrap it
     if (//peek< exactly<'!'> >(position) ||
         peek< exactly<';'> >(position) ||
@@ -863,7 +923,10 @@ namespace Sass {
         peek< exactly<ellipsis> >(position) ||
         peek< default_flag >(position) ||
         peek< global_flag >(position))
-    { return disj1; }
+    {
+      DEBUG_PRINTLN(ALL, "" << pp << "encounted an ;, }, {, ), : or comma so return the first list item");
+      pp.erase(pp.end() - 2, pp.end());
+      return disj1; }
 
     List* space_list = new (ctx.mem) List(path, source_position, 2, List::SPACE);
     (*space_list) << disj1;
@@ -879,9 +942,12 @@ namespace Sass {
              peek< default_flag >(position) ||
              peek< global_flag >(position)))
     {
+      DEBUG_PRINTLN(ALL, "" << pp << "found another list item");
       (*space_list) << parse_disjunction();
     }
 
+    DEBUG_PRINTLN(ALL, "" << pp << "exit parse_space_list");
+    pp.erase(pp.end() - 2, pp.end());
     return space_list;
   }
 
@@ -979,9 +1045,9 @@ namespace Sass {
 
   Expression* Parser::parse_factor()
   {
-    if (lex< exactly<'('> >()) {
+    if (peek< exactly<'('> >()) {
       Expression* value = parse_map();
-      if (!lex< exactly<')'> >()) error("unclosed parenthesis");
+      // if (!peek< exactly<')'> >()) error("unclosed parenthesis");
       value->is_delayed(false);
       // make sure wrapped lists and division expressions are non-delayed within parentheses
       if (value->concrete_type() == Expression::LIST) {
