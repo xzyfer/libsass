@@ -13,7 +13,7 @@
 
 #include <typeinfo>
 
-// #define DEBUG true
+#define DEBUG true
 #include "debug.hpp"
 
 namespace Sass {
@@ -69,6 +69,7 @@ namespace Sass {
         if (!lex< exactly<';'> >()) { DEBUG_PRINTLN(ALL, "lexed => " << lexed.to_string()); error("top-level variable binding must be terminated by ';'"); }
       }
       else if (peek< sequence< optional< exactly<'*'> >, alternatives< identifier_schema, identifier >, optional_spaces, exactly<':'>, optional_spaces, exactly<'{'> > >(position)) {
+        DEBUG_PRINTLN(ALL, "parsing propset for " << lexed.to_string());
         (*root) << parse_propset();
       }
       else if (peek< include >() /* || peek< exactly<'+'> >() */) {
@@ -200,6 +201,7 @@ namespace Sass {
     Expression* val = 0;
     bool is_rest = false;
     if (lex< exactly<':'> >()) { // there's a default value
+      DEBUG_PRINTLN(ALL, "parse_parameter for " << lexed.to_string());
       val = parse_space_list();
       val->is_delayed(false);
     }
@@ -296,7 +298,7 @@ namespace Sass {
     lex< exactly<':'> >();
 
     if (!peek< exactly<'{'> >()) error("expected a '{' after namespaced property");
-
+    DEBUG_PRINTLN(ALL, "parse_parameter for " << lexed.to_string());
     propset->block(parse_block());
 
     return propset;
@@ -651,7 +653,7 @@ namespace Sass {
         (*block) << parse_while_directive();
       }
       else if (lex < return_directive >()) {
-        (*block) << new (ctx.mem) Return(path, source_position, parse_list());
+        (*block) << new (ctx.mem) Return(path, source_position, parse_map());
         semicolon = true;
       }
       else if (peek< warn >()) {
@@ -709,13 +711,16 @@ namespace Sass {
         (*block) << parse_ruleset(lookahead_result);
       }
       else if (peek< sequence< optional< exactly<'*'> >, alternatives< identifier_schema, identifier >, optional_spaces, exactly<':'>, optional_spaces, exactly<'{'> > >(position)) {
+        DEBUG_PRINTLN(ALL, "parse_propset - 1 for " << lexed.to_string());
         (*block) << parse_propset();
       }
       else if (!peek< exactly<';'> >()) {
         if (peek< sequence< optional< exactly<'*'> >, identifier_schema, exactly<':'>, exactly<'{'> > >()) {
+          DEBUG_PRINTLN(ALL, "parse_propset - 3 for " << lexed.to_string());
           (*block) << parse_propset();
         }
         else if (peek< sequence< optional< exactly<'*'> >, identifier, exactly<':'>, exactly<'{'> > >()) {
+          DEBUG_PRINTLN(ALL, "parse_propset - 2 for " << lexed.to_string());
           (*block) << parse_propset();
         }
         else {
@@ -755,7 +760,8 @@ namespace Sass {
     }
     if (!lex< exactly<':'> >()) error("property \"" + string(lexed) + "\" must be followed by a ':'");
     if (peek< exactly<';'> >()) error("style declaration must contain a value");
-    Expression* list = parse_list();
+    DEBUG_PRINTLN(ALL, "parse_declaration");
+    Expression* list = parse_map();
     return new (ctx.mem) Declaration(path, prop->position(), prop, list/*, lex<important>()*/);
   }
 
@@ -789,7 +795,7 @@ namespace Sass {
       if (!(lex< exactly<')'> >()))
       {
         DEBUG_PRINTLN(ALL, "map doesn't end with a ) so we throw an error");
-        error("unclosed parenthesis 2"); }
+        error("unclosed parenthesis 3"); }
 
       DEBUG_PRINTLN(ALL, "" << pp << "lexed closing => " << lexed.to_string());
       pp.erase(pp.end() - 2, pp.end());
@@ -1045,9 +1051,9 @@ namespace Sass {
 
   Expression* Parser::parse_factor()
   {
-    if (peek< exactly<'('> >()) {
-      Expression* value = parse_map();
-      // if (!peek< exactly<')'> >()) error("unclosed parenthesis");
+    if (lex< exactly<'('> >()) {
+      Expression* value = parse_comma_list();
+      if (!lex< exactly<')'> >()) error("unclosed parenthesis");
       value->is_delayed(false);
       // make sure wrapped lists and division expressions are non-delayed within parentheses
       if (value->concrete_type() == Expression::LIST) {
@@ -1119,7 +1125,7 @@ namespace Sass {
         // special case -- if there's a comment, treat it as part of a URL
         lex<spaces>();
         if (peek<line_comment_prefix>() || peek<block_comment_prefix>()) error("comment in URL"); // doesn't really matter what we throw
-        Expression* expr = parse_list();
+        Expression* expr = parse_map();
         if (!lex< exactly<')'> >()) error("dangling expression in URL"); // doesn't really matter what we throw
         Argument* arg = new (ctx.mem) Argument(path, expr->position(), expr);
         *args << arg;
@@ -1210,7 +1216,7 @@ namespace Sass {
         const char* j = find_first_in_interval< exactly<rbrace> >(p, chunk.end); // find the closing brace
         if (j) {
           // parse the interpolant and accumulate it
-          Expression* interp_node = Parser::from_token(Token(p+2, j), ctx, path, source_position).parse_list();
+          Expression* interp_node = Parser::from_token(Token(p+2, j), ctx, path, source_position).parse_map();
           interp_node->is_interpolant(true);
           (*schema) << interp_node;
           i = j+1;
@@ -1296,7 +1302,7 @@ namespace Sass {
         const char* j = find_first_in_interval< exactly<rbrace> >(p, str.end); // find the closing brace
         if (j) {
           // parse the interpolant and accumulate it
-          Expression* interp_node = Parser::from_token(Token(p+2, j), ctx, path, source_position).parse_list();
+          Expression* interp_node = Parser::from_token(Token(p+2, j), ctx, path, source_position).parse_map();
           interp_node->is_interpolant(true);
           (*schema) << interp_node;
           i = j+1;
@@ -1321,7 +1327,7 @@ namespace Sass {
     while (position < end) {
       if (lex< interpolant >()) {
         Token insides(Token(lexed.begin + 2, lexed.end - 1));
-        Expression* interp_node = Parser::from_token(insides, ctx, path, source_position).parse_list();
+        Expression* interp_node = Parser::from_token(insides, ctx, path, source_position).parse_map();
         interp_node->is_interpolant(true);
         (*schema) << interp_node;
       }
@@ -1367,7 +1373,7 @@ namespace Sass {
       }
       else if (lex< interpolant >()) {
         Token insides(Token(lexed.begin + 2, lexed.end - 1));
-        Expression* interp_node = Parser::from_token(insides, ctx, path, source_position).parse_list();
+        Expression* interp_node = Parser::from_token(insides, ctx, path, source_position).parse_map();
         interp_node->is_interpolant(true);
         (*schema) << interp_node;
       }
@@ -1405,7 +1411,7 @@ namespace Sass {
         const char* j = find_first_in_interval< exactly<rbrace> >(p, id.end); // find the closing brace
         if (j) {
           // parse the interpolant and accumulate it
-          Expression* interp_node = Parser::from_token(Token(p+2, j), ctx, path, source_position).parse_list();
+          Expression* interp_node = Parser::from_token(Token(p+2, j), ctx, path, source_position).parse_map();
           interp_node->is_interpolant(true);
           (*schema) << interp_node;
           i = j+1;
@@ -1431,7 +1437,7 @@ namespace Sass {
     lex< exactly<'('> >();
     Position arg_pos = source_position;
     const char* arg_beg = position;
-    parse_list();
+    parse_map();
     const char* arg_end = position;
     lex< exactly<')'> >();
 
@@ -1464,7 +1470,7 @@ namespace Sass {
   {
     lex< if_directive >() || (else_if && lex< exactly<if_after_else_kwd> >());
     Position if_source_position = source_position;
-    Expression* predicate = parse_list();
+    Expression* predicate = parse_map();
     predicate->is_delayed(false);
     if (!peek< exactly<'{'> >()) error("expected '{' after the predicate for @if");
     Block* consequent = parse_block();
@@ -1528,7 +1534,7 @@ namespace Sass {
   {
     lex< while_directive >();
     Position while_source_position = source_position;
-    Expression* predicate = parse_list();
+    Expression* predicate = parse_map();
     predicate->is_delayed(false);
     Block* body = parse_block();
     return new (ctx.mem) While(path, while_source_position, predicate, body);
@@ -1627,7 +1633,7 @@ namespace Sass {
   Warning* Parser::parse_warning()
   {
     lex< warn >();
-    return new (ctx.mem) Warning(path, source_position, parse_list());
+    return new (ctx.mem) Warning(path, source_position, parse_map());
   }
 
   Selector_Lookahead Parser::lookahead_for_selector(const char* start)
