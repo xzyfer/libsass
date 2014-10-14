@@ -5,7 +5,11 @@
 #include "parser.hpp"
 #include "constants.hpp"
 #include "to_string.hpp"
+
+#ifndef SASS_INSPECT
 #include "inspect.hpp"
+#endif
+
 #include "eval.hpp"
 #include "util.hpp"
 #include "utf8_string.hpp"
@@ -1190,11 +1194,11 @@ namespace Sass {
     {
       Map* m = ARGM("$map", Map, ctx);
       Expression* v = ARG("$key", Expression);
-      if (!m || m->empty()) return new (ctx.mem) Null(path, position);
-      for (size_t i = 0, L = m->length(); i < L; ++i) {
-        if (eq((*m)[i]->key(), v, ctx)) return m->value_at_index(i);
+      try {
+        return m->at(v);
+      } catch (const std::out_of_range& oor) {
+        return new (ctx.mem) Null(path, position);;
       }
-      return new (ctx.mem) Null(path, position);
     }
 
     Signature map_has_key_sig = "map-has-key($map, $key)";
@@ -1202,21 +1206,21 @@ namespace Sass {
     {
       Map* m = ARGM("$map", Map, ctx);
       Expression* v = ARG("$key", Expression);
-      if (!m || m->empty()) return new (ctx.mem) Boolean(path, position, false);
-      for (size_t i = 0, L = m->length(); i < L; ++i) {
-        if (eq((*m)[i]->key(), v, ctx)) return new (ctx.mem) Boolean(path, position, true);
+      try {
+        return new (ctx.mem) Boolean(path, position, m->has(v));
+      } catch (const std::out_of_range& oor) {
+        return new (ctx.mem) Boolean(path, position, false);
       }
-      return new (ctx.mem) Boolean(path, position, false);
     }
 
     Signature map_keys_sig = "map-keys($map)";
     BUILT_IN(map_keys)
     {
       Map* m = ARGM("$map", Map, ctx);
-      List* result = new (ctx.mem) List(path, position, 1, List::COMMA);
+      List* result = new (ctx.mem) List(path, position, m->length(), List::COMMA);
       if (!m || m->empty()) return result;
-      for (size_t i = 0, L = m->length(); i < L; ++i) {
-        *result << (*m)[i]->key();
+      for ( auto key : m->keys()) {
+        *result << key;
       }
       return result;
     }
@@ -1225,10 +1229,10 @@ namespace Sass {
     BUILT_IN(map_values)
     {
       Map* m = ARGM("$map", Map, ctx);
-      List* result = new (ctx.mem) List(path, position, 1, List::COMMA);
+      List* result = new (ctx.mem) List(path, position, m->length(), List::COMMA);
       if (!m || m->empty()) return result;
-      for (size_t i = 0, L = m->length(); i < L; ++i) {
-        *result << (*m)[i]->value();
+      for ( auto key : m->keys()) {
+        *result << m->at(key);
       }
       return result;
     }
@@ -1253,12 +1257,12 @@ namespace Sass {
       Map* m = ARGM("$map", Map, ctx);
       List* arglist = ARG("$keys", List);
       Map* result = new (ctx.mem) Map(path, position, 1);
-      for (size_t i = 0, L = m->length(); i < L; ++i) {
+      for (auto key : m->keys()) {
         remove = false;
         for (size_t j = 0, K = arglist->length(); j < K && !remove; ++j) {
-          remove = eq((*m)[i]->key(), arglist->value_at_index(j), ctx);
+          remove = eq(key, arglist->value_at_index(j), ctx);
         }
-        if (!remove) *result << (*m)[i];
+        if (!remove) *result << make_pair(key, m->at(key));
       }
       return result;
     }
@@ -1271,10 +1275,8 @@ namespace Sass {
       for (size_t i = 0, L = arglist->length(); i < L; ++i) {
         string name = string(((Argument*)(*arglist)[i])->name());
         string sanitized_name = string(name, 1);
-        *result << new (ctx.mem) KeyValuePair(path,
-                                              position,
-                                              new (ctx.mem) String_Constant(path, position, sanitized_name),
-                                              ((Argument*)(*arglist)[i])->value());
+        *result << make_pair(new (ctx.mem) String_Constant(path, position, sanitized_name),
+                             ((Argument*)(*arglist)[i])->value());
       }
       return result;
     }

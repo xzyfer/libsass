@@ -1,3 +1,5 @@
+#define SASS_INSPECT
+
 #include <string>
 
 #ifndef SASS_OPERATION

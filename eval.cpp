@@ -2,11 +2,14 @@
 #include "ast.hpp"
 #include "bind.hpp"
 #include "to_string.hpp"
-#include "inspect.hpp"
 #include "to_c.hpp"
 #include "context.hpp"
 #include "backtrace.hpp"
 #include "prelexer.hpp"
+
+#ifndef SASS_INSPECT
+#include "inspect.hpp"
+#endif
 
 #include <cstdlib>
 #include <cmath>
@@ -177,12 +180,8 @@ namespace Sass {
     Map* mm = new (ctx.mem) Map(m->path(),
                                   m->position(),
                                   m->length());
-    for (size_t i = 0, L = m->length(); i < L; ++i) {
-      KeyValuePair* kvp = new (ctx.mem) KeyValuePair(m->path(),
-                                                      m->position(),
-                                                      (*m)[i]->key()->perform(this),
-                                                      (*m)[i]->value()->perform(this));
-      *mm << kvp;
+    for (auto key : m->keys()) {
+      *mm << std::make_pair(key->perform(this), m->at(key)->perform(this));
     }
     return mm;
   }
@@ -648,10 +647,8 @@ namespace Sass {
         Map* l = static_cast<Map*>(lhs);
         Map* r = static_cast<Map*>(rhs);
         if (l->length() != r->length()) return false;
-        for (size_t i = 0, L = l->length(); i < L; ++i) {
-          if (!eq((*l)[i]->key(), (*r)[i]->key(), ctx)) return false;
-          if (!eq((*l)[i]->value(), (*r)[i]->value(), ctx)) return false;
-        }
+        for (auto key : l->keys())
+          if (!eq(l->at(key), r->at(key), ctx)) return false;
         return true;
       } break;
       case Expression::NULL_VAL: {
@@ -872,9 +869,9 @@ namespace Sass {
         e = l;
       } break;
       case SASS_MAP: {
-        Map* m = new (ctx.mem) Map(path, position, v.map.length);
+        Map* m = new (ctx.mem) Map(path, position);
         for (size_t i = 0, L = v.map.length; i < L; ++i) {
-          *m << new (ctx.mem) KeyValuePair(path, position,
+          *m << std::make_pair(
             cval_to_astnode(v.map.pairs[i].key, ctx, backtrace, path, position),
             cval_to_astnode(v.map.pairs[i].value, ctx, backtrace, path, position));
         }

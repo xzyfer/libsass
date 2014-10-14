@@ -15,7 +15,10 @@
 #include "constants.hpp"
 #include "parser.hpp"
 #include "file.hpp"
+
+#ifndef SASS_INSPECT
 #include "inspect.hpp"
+#endif
 #include "output_nested.hpp"
 #include "output_compressed.hpp"
 #include "expand.hpp"
