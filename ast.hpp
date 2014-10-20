@@ -859,6 +859,7 @@ namespace Sass {
     ADD_PROPERTY(double, value);
     vector<string> numerator_units_;
     vector<string> denominator_units_;
+    size_t hash_ = 0;
   public:
     Number(string path, Position position, double val, string u = "")
     : Expression(path, position),
@@ -979,9 +980,10 @@ namespace Sass {
       return false;
     }
 
-    virtual size_t hash() const
+    virtual size_t hash()
     {
-      return std::hash<double>()(value_);
+      if (hash_ == 0) hash_ = std::hash<double>()(value_);
+      return hash_;
     }
 
     ATTACH_OPERATIONS();
@@ -996,6 +998,7 @@ namespace Sass {
     ADD_PROPERTY(double, b);
     ADD_PROPERTY(double, a);
     ADD_PROPERTY(string, disp);
+    size_t hash_ = 0;
   public:
     Color(string path, Position position, double r, double g, double b, double a = 1, const string disp = "")
     : Expression(path, position), r_(r), g_(g), b_(b), a_(a), disp_(disp)
@@ -1016,8 +1019,9 @@ namespace Sass {
       return false;
     }
 
-    virtual size_t hash() const {
-      return std::hash<double>()(r_) ^ std::hash<double>()(g_) ^ std::hash<double>()(b_) ^ std::hash<double>()(a_);
+    virtual size_t hash() {
+      if (hash_ == 0) hash_ = std::hash<double>()(r_) ^ std::hash<double>()(g_) ^ std::hash<double>()(b_) ^ std::hash<double>()(a_);
+      return hash_;
     }
 
     ATTACH_OPERATIONS();
@@ -1028,6 +1032,7 @@ namespace Sass {
   ////////////
   class Boolean : public Expression {
     ADD_PROPERTY(bool, value);
+    size_t hash_ = 0;
   public:
     Boolean(string path, Position position, bool val) : Expression(path, position), value_(val)
     { concrete_type(BOOLEAN); }
@@ -1048,9 +1053,9 @@ namespace Sass {
       return false;
     }
 
-    virtual size_t hash() const
-    {
-      return std::hash<bool>()(value_);
+    virtual size_t hash() {
+      if (hash_ == 0) hash_ = std::hash<bool>()(value_);
+      return hash_;
     }
 
     ATTACH_OPERATIONS();
