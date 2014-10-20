@@ -174,6 +174,8 @@ namespace Sass {
   class Vectorized {
     vector<T> elements_;
   protected:
+    size_t hash_;
+    void reset_hash() { hash_ = 0; }
     virtual void adjust_after_pushing(T element) { }
   public:
     Vectorized(size_t s = 0) : elements_(vector<T>())
@@ -185,6 +187,7 @@ namespace Sass {
     const T& operator[](size_t i) const { return elements_[i]; }
     Vectorized& operator<<(T element)
     {
+      reset_hash();
       elements_.push_back(element);
       adjust_after_pushing(element);
       return *this;
@@ -209,6 +212,9 @@ namespace Sass {
   private:
     unordered_map<Expression*, Expression*> elements_;
     vector<Expression*> list_;
+  protected:
+    size_t hash_;
+    void reset_hash() { hash_ = 0; }
   public:
     Hashed(size_t s = 0) : elements_(unordered_map<Expression*, Expression*>(s)), list_(vector<Expression*>())
     { elements_.reserve(s); list_.reserve(s); }
@@ -219,9 +225,10 @@ namespace Sass {
     Expression* at(Expression* k) const    { return elements_.at(k); }
     Hashed& operator<<(pair<Expression*, Expression*> p)
     {
-      if (!has(p.first)) {
-        list_.push_back(p.first);
-      }
+      reset_hash();
+
+      if (!has(p.first)) list_.push_back(p.first);
+
       elements_[p.first] = p.second;
       return *this;
     }
@@ -667,18 +674,14 @@ namespace Sass {
       return false;
     }
 
-    virtual size_t hash() const
+    virtual size_t hash()
     {
-
-      size_t ret = 0;
-
+      if (hash_ > 0) return hash_;
 
       for (size_t i = 0, L = length(); i < L; ++i)
-      {
-        ret ^= (elements()[i])->hash();
-      }
+        hash_ ^= (elements()[i])->hash();
 
-      return ret;
+      return hash_;
     }
 
     ATTACH_OPERATIONS();
@@ -716,14 +719,14 @@ namespace Sass {
       return false;
     }
 
-    virtual size_t hash() const
+    virtual size_t hash()
     {
-      size_t ret = 0;
+      if (hash_ > 0) return hash_;
 
       for (auto key : keys())
         hash_ ^= key->hash() ^ at(key)->hash();
 
-      return ret;
+      return hash_;
     }
 
     ATTACH_OPERATIONS();
@@ -1090,26 +1093,28 @@ namespace Sass {
   ////////////////////////////////////////////////////////
   class String_Constant : public String {
     ADD_PROPERTY(string, value);
+    string unquoted_;
+    size_t hash_ = 0;
   public:
     String_Constant(string path, Position position, string val, bool unq = false)
     : String(path, position, unq, true), value_(val)
-    { }
+    { unquoted_ = unquote(value_); }
     String_Constant(string path, Position position, const char* beg, bool unq = false)
     : String(path, position, unq, true), value_(string(beg))
-    { }
+    { unquoted_ = unquote(value_); }
     String_Constant(string path, Position position, const char* beg, const char* end, bool unq = false)
     : String(path, position, unq, true), value_(string(beg, end-beg))
-    { }
+    { unquoted_ = unquote(value_); }
     String_Constant(string path, Position position, const Token& tok, bool unq = false)
     : String(path, position, unq, true), value_(string(tok.begin, tok.end))
-    { }
+    { unquoted_ = unquote(value_); }
     string type() { return "string"; }
     static string type_name() { return "string"; }
 
     virtual bool operator==(Expression& rhs) const {
       try
       {
-        return unquote(value()) == unquote(static_cast<String_Constant&>(rhs).value());
+        return unquoted_ == static_cast<String_Constant&>(rhs).unquoted_;
       }
       catch (std::bad_cast& bc)
       {
@@ -1120,7 +1125,8 @@ namespace Sass {
 
     virtual size_t hash() const
     {
-      return std::hash<string>()(unquote(value_));
+      if (hash_ == 0) std::hash<string>()(unquoted_);
+      return hash_;
     }
 
     bool is_quoted() { return value_.length() && (value_[0] == '"' || value_[0] == '\''); }
