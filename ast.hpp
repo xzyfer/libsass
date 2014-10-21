@@ -1133,10 +1133,10 @@ namespace Sass {
     virtual ~Simple_Selector() = 0;
     virtual Compound_Selector* unify_with(Compound_Selector*, Context&);
     virtual bool is_pseudo_element() { return false; }
-    
+
     bool operator==(const Simple_Selector& rhs) const;
     inline bool operator!=(const Simple_Selector& rhs) const { return !(*this == rhs); }
-    
+
     bool operator<(const Simple_Selector& rhs) const;
   };
   inline Simple_Selector::~Simple_Selector() { }
@@ -1271,7 +1271,7 @@ namespace Sass {
     { }
     ATTACH_OPERATIONS();
   };
-  
+
   struct Complex_Selector_Pointer_Compare {
     bool operator() (const Complex_Selector* const pLeft, const Complex_Selector* const pRight) const;
   };
@@ -1323,16 +1323,16 @@ namespace Sass {
              !static_cast<Selector_Reference*>((*this)[0])->selector();
     }
     vector<string> to_str_vec(); // sometimes need to convert to a flat "by-value" data structure
-    
+
     bool operator<(const Compound_Selector& rhs) const;
-    
+
     bool operator==(const Compound_Selector& rhs) const;
     inline bool operator!=(const Compound_Selector& rhs) const { return !(*this == rhs); }
 
     SourcesSet& sources() { return sources_; }
     void clearSources() { sources_.clear(); }
     void mergeSources(SourcesSet& sources, Context& ctx);
-    
+
     Compound_Selector* clone(Context&) const; // does not clone the Simple_Selector*s
 
     Compound_Selector* minus(Compound_Selector* rhs, Context& ctx);
@@ -1341,13 +1341,13 @@ namespace Sass {
 
   ////////////////////////////////////////////////////////////////////////////
   // General selectors -- i.e., simple sequences combined with one of the four
-  // CSS selector combinators (">", "+", "~", and whitespace). Essentially a
-  // linked list.
+  // CSS selector combinators (">", "+", "~", "/deep/", and whitespace). Essentially
+  // a linked list.
   ////////////////////////////////////////////////////////////////////////////
   struct Context;
   class Complex_Selector : public Selector {
   public:
-    enum Combinator { ANCESTOR_OF, PARENT_OF, PRECEDES, ADJACENT_TO };
+    enum Combinator { ANCESTOR_OF, PARENT_OF, PRECEDES, ADJACENT_TO, DEEP };
   private:
     ADD_PROPERTY(Combinator, combinator);
     ADD_PROPERTY(Compound_Selector*, head);
@@ -1388,15 +1388,15 @@ namespace Sass {
       //s
 
       SourcesSet srcs;
-      
+
       Compound_Selector* pHead = head();
       Complex_Selector*  pTail = tail();
-      
+
       if (pHead) {
         SourcesSet& headSources = pHead->sources();
         srcs.insert(headSources.begin(), headSources.end());
       }
-      
+
       if (pTail) {
         SourcesSet tailSources = pTail->sources();
         srcs.insert(tailSources.begin(), tailSources.end());
@@ -1409,11 +1409,11 @@ namespace Sass {
       Complex_Selector* pIter = this;
       while (pIter) {
         Compound_Selector* pHead = pIter->head();
-        
+
         if (pHead) {
           pHead->mergeSources(sources, ctx);
         }
-        
+
         pIter = pIter->tail();
       }
     }
@@ -1421,11 +1421,11 @@ namespace Sass {
       Complex_Selector* pIter = this;
       while (pIter) {
         Compound_Selector* pHead = pIter->head();
-        
+
         if (pHead) {
           pHead->clearSources();
         }
-        
+
         pIter = pIter->tail();
       }
     }
@@ -1434,7 +1434,7 @@ namespace Sass {
     vector<Compound_Selector*> to_vector();
     ATTACH_OPERATIONS();
   };
-  
+
 	typedef deque<Complex_Selector*> ComplexSelectorDeque;
 
   ///////////////////////////////////
@@ -1462,8 +1462,8 @@ namespace Sass {
     // vector<Complex_Selector*> members() { return elements_; }
     ATTACH_OPERATIONS();
   };
-  
-  
+
+
   template<typename SelectorType>
   bool selectors_equal(const SelectorType& one, const SelectorType& two, bool simpleSelectorOrderDependent) {
   	// Test for equality among selectors while differentiating between checks that demand the underlying Simple_Selector

@@ -566,6 +566,7 @@ namespace Sass {
       case Complex_Selector::PARENT_OF:   append_to_buffer(">"); break;
       case Complex_Selector::PRECEDES:    append_to_buffer("~"); break;
       case Complex_Selector::ADJACENT_TO: append_to_buffer("+"); break;
+      case Complex_Selector::DEEP:        append_to_buffer("/deep/"); break;
     }
     if (tail && comb != Complex_Selector::ANCESTOR_OF) {
       append_to_buffer(" ");

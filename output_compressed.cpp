@@ -346,6 +346,9 @@ namespace Sass {
       case Complex_Selector::ADJACENT_TO:
         append_singleline_part_to_buffer("+");
         break;
+      case Complex_Selector::DEEP:
+        append_singleline_part_to_buffer("/deep/");
+        break;
     }
     if (tail) tail->perform(this);
   }

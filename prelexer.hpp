@@ -425,6 +425,7 @@ namespace Sass {
     const char* precedes(const char* src);
     const char* parent_of(const char* src);
     const char* ancestor_of(const char* src);
+    const char* deep_combinator(const char* src);
 
     // Match SCSS variable names.
     const char* variable(const char* src);

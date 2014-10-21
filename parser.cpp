@@ -377,9 +377,10 @@ namespace Sass {
   {
     Position sel_source_position = Position();
     Compound_Selector* lhs;
-    if (peek< exactly<'+'> >() ||
-        peek< exactly<'~'> >() ||
-        peek< exactly<'>'> >()) {
+    if (peek< exactly<'+'> >()    ||
+        peek< exactly<'~'> >()    ||
+        peek< exactly<'>'> >()    ||
+        peek< deep_combinator >()) {
       // no selector before the combinator
       lhs = 0;
     }
@@ -389,10 +390,11 @@ namespace Sass {
     }
 
     Complex_Selector::Combinator cmb;
-    if      (lex< exactly<'+'> >()) cmb = Complex_Selector::ADJACENT_TO;
-    else if (lex< exactly<'~'> >()) cmb = Complex_Selector::PRECEDES;
-    else if (lex< exactly<'>'> >()) cmb = Complex_Selector::PARENT_OF;
-    else                            cmb = Complex_Selector::ANCESTOR_OF;
+    if      (lex< deep_combinator >()) cmb = Complex_Selector::DEEP;
+    else if (lex< exactly<'+'> >())    cmb = Complex_Selector::ADJACENT_TO;
+    else if (lex< exactly<'~'> >())    cmb = Complex_Selector::PRECEDES;
+    else if (lex< exactly<'>'> >())    cmb = Complex_Selector::PARENT_OF;
+    else                               cmb = Complex_Selector::ANCESTOR_OF;
 
     Complex_Selector* rhs;
     if (peek< exactly<','> >() ||
@@ -439,13 +441,14 @@ namespace Sass {
     }
 
     while (!peek< spaces >(position) &&
-           !(peek < exactly<'+'> >(position) ||
-             peek < exactly<'~'> >(position) ||
-             peek < exactly<'>'> >(position) ||
-             peek < exactly<','> >(position) ||
-             peek < exactly<')'> >(position) ||
-             peek < exactly<'{'> >(position) ||
-             peek < exactly<'}'> >(position) ||
+           !(peek < exactly<'+'> >(position)    ||
+             peek < exactly<'~'> >(position)    ||
+             peek < exactly<'>'> >(position)    ||
+             peek < deep_combinator >(position) ||
+             peek < exactly<','> >(position)    ||
+             peek < exactly<')'> >(position)    ||
+             peek < exactly<'{'> >(position)    ||
+             peek < exactly<'}'> >(position)    ||
              peek < exactly<';'> >(position))) {
       (*seq) << parse_simple_selector();
     }
@@ -589,14 +592,14 @@ namespace Sass {
     bool semicolon = false;
     Selector_Lookahead lookahead_result;
     Block* block = new (ctx.mem) Block(path, source_position);
-    
-    // JMA - ensure that a block containing only block_comments is parsed 
+
+    // JMA - ensure that a block containing only block_comments is parsed
     while (lex< block_comment >()) {
       String*  contents = parse_interpolated_chunk(lexed);
       Comment* comment  = new (ctx.mem) Comment(path, source_position, contents);
       (*block) << comment;
     }
-    
+
     while (!lex< exactly<'}'> >()) {
       if (semicolon) {
         if (!lex< exactly<';'> >()) {
@@ -1601,6 +1604,7 @@ namespace Sass {
            (q = peek< exactly<'+'> >(p))                           ||
            (q = peek< exactly<'~'> >(p))                           ||
            (q = peek< exactly<'>'> >(p))                           ||
+           (q = peek< deep_combinator >(p))                        ||
            (q = peek< exactly<','> >(p))                           ||
            (q = peek< binomial >(p))                               ||
            (q = peek< sequence< optional<sign>,
@@ -1657,6 +1661,7 @@ namespace Sass {
            (q = peek< exactly<'+'> >(p))                           ||
            (q = peek< exactly<'~'> >(p))                           ||
            (q = peek< exactly<'>'> >(p))                           ||
+           (q = peek< deep_combinator >(p))                        ||
            (q = peek< exactly<','> >(p))                           ||
            (q = peek< binomial >(p))                               ||
            (q = peek< sequence< optional<sign>,
