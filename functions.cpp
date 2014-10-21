@@ -88,10 +88,17 @@ namespace Sass {
       if (val) return val;
 
       List* lval = dynamic_cast<List*>(env[argname]);
-      if (lval && lval->length() == 0) return new (ctx.mem) Map(path, position, 1);
+      if (lval && lval->length() == 0) return new (ctx.mem) Map(path, position, 0);
 
-      // fallback on get_arg for error handling
-      val = get_arg<Map>(argname, env, sig, path, position, backtrace);
+      if (!val) {
+        string msg("argument `");
+        msg += argname;
+        msg += "` of `";
+        msg += sig;
+        msg += "` must be a map";
+        error(msg, path, position, backtrace);
+      }
+
       return val;
     }
 
@@ -1206,11 +1213,8 @@ namespace Sass {
     {
       Map* m = ARGM("$map", Map, ctx);
       Expression* v = ARG("$key", Expression);
-      try {
-        return new (ctx.mem) Boolean(path, position, m->has(v));
-      } catch (const std::out_of_range& oor) {
-        return new (ctx.mem) Boolean(path, position, false);
-      }
+      if (m->has(v)) return new (ctx.mem) Boolean(path, position, true);
+      return new (ctx.mem) Boolean(path, position, false);
     }
 
     Signature map_keys_sig = "map-keys($map)";
