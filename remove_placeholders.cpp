@@ -1,6 +1,10 @@
 #include "remove_placeholders.hpp"
 #include "context.hpp"
+
+#ifndef SASS_INSPECT
 #include "inspect.hpp"
+#endif
+
 #include "to_string.hpp"
 #include <iostream>
 

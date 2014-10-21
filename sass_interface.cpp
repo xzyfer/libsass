@@ -6,7 +6,10 @@
 
 #include "sass_interface.h"
 #include "context.hpp"
+
+#ifndef SASS_INSPECT
 #include "inspect.hpp"
+#endif
 
 #ifndef SASS_ERROR_HANDLING
 #include "error_handling.hpp"
