@@ -26,6 +26,8 @@
 
 #endif
 
+#include "inspect.hpp"
+
 #ifndef SASS_CONSTANTS
 #include "constants.hpp"
 #endif
@@ -565,24 +567,12 @@ namespace Sass {
   ///////////////////////////////////////////////////////////////////////
   // Key value paris.
   ///////////////////////////////////////////////////////////////////////
-  class KeyValuePair : public AST_Node {
-    ADD_PROPERTY(Expression*, key);
-    ADD_PROPERTY(Expression*, value);
-  public:
-    KeyValuePair(string p, Position pos,
-              Expression* key = 0, Expression* value = 0)
-    : AST_Node(p, pos), key_(key), value_(value)
-    {
-    }
-    ATTACH_OPERATIONS();
-  };
-
-  class Map : public Expression, public Vectorized<KeyValuePair*> {
+  class Map : public Expression, public Vectorized<pair<Expression*, Expression*>> {
   public:
     Map(string path, Position position,
          size_t size = 0)
     : Expression(path, position),
-      Vectorized<KeyValuePair*>(size)
+      Vectorized<pair<Expression*, Expression*>>(size)
     { concrete_type(MAP); }
     string type() { return "map"; }
     static string type_name() { return "map"; }
@@ -1046,7 +1036,7 @@ namespace Sass {
   //////////////////////////////////////////////////////////////////////////////////////////
   // Additional method on Maps to retrieve values directly.
   //////////////////////////////////////////////////////////////////////////////////////////
-  inline Expression* Map::value_at_index(size_t i) { return (*this)[i]->value(); }
+  inline Expression* Map::value_at_index(size_t i) { return (*this)[i].second; }
 
   ////////////////////////////////////////////////////////////////////////
   // Argument lists -- in their own class to facilitate context-sensitive

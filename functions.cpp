@@ -84,7 +84,7 @@ namespace Sass {
       if (val) return val;
 
       List* lval = dynamic_cast<List*>(env[argname]);
-      if (lval && lval->length() == 0) return new (ctx.mem) Map(path, position, 1);
+      if (lval && lval->length() == 0) return new (ctx.mem) Map(path, position, 0);
 
       // fallback on get_arg for error handling
       val = get_arg<Map>(argname, env, sig, path, position, backtrace);
@@ -1192,7 +1192,7 @@ namespace Sass {
       Expression* v = ARG("$key", Expression);
       if (!m || m->empty()) return new (ctx.mem) Null(path, position);
       for (size_t i = 0, L = m->length(); i < L; ++i) {
-        if (eq((*m)[i]->key(), v, ctx)) return m->value_at_index(i);
+        if (eq((*m)[i].first, v, ctx)) return m->value_at_index(i);
       }
       return new (ctx.mem) Null(path, position);
     }
@@ -1204,7 +1204,7 @@ namespace Sass {
       Expression* v = ARG("$key", Expression);
       if (!m || m->empty()) return new (ctx.mem) Boolean(path, position, false);
       for (size_t i = 0, L = m->length(); i < L; ++i) {
-        if (eq((*m)[i]->key(), v, ctx)) return new (ctx.mem) Boolean(path, position, true);
+        if (eq((*m)[i].first, v, ctx)) return new (ctx.mem) Boolean(path, position, true);
       }
       return new (ctx.mem) Boolean(path, position, false);
     }
@@ -1216,7 +1216,7 @@ namespace Sass {
       List* result = new (ctx.mem) List(path, position, 1, List::COMMA);
       if (!m || m->empty()) return result;
       for (size_t i = 0, L = m->length(); i < L; ++i) {
-        *result << (*m)[i]->key();
+        *result << (*m)[i].first;
       }
       return result;
     }
@@ -1228,7 +1228,7 @@ namespace Sass {
       List* result = new (ctx.mem) List(path, position, 1, List::COMMA);
       if (!m || m->empty()) return result;
       for (size_t i = 0, L = m->length(); i < L; ++i) {
-        *result << (*m)[i]->value();
+        *result << (*m)[i].second;
       }
       return result;
     }
@@ -1256,7 +1256,7 @@ namespace Sass {
       for (size_t i = 0, L = m->length(); i < L; ++i) {
         remove = false;
         for (size_t j = 0, K = arglist->length(); j < K && !remove; ++j) {
-          remove = eq((*m)[i]->key(), arglist->value_at_index(j), ctx);
+          remove = eq((*m)[i].first, arglist->value_at_index(j), ctx);
         }
         if (!remove) *result << (*m)[i];
       }
@@ -1271,8 +1271,7 @@ namespace Sass {
       for (size_t i = 0, L = arglist->length(); i < L; ++i) {
         string name = string(((Argument*)(*arglist)[i])->name());
         string sanitized_name = string(name, 1);
-        *result << new (ctx.mem) KeyValuePair(path,
-                                              position,
+        *result << make_pair(
                                               new (ctx.mem) String_Constant(path, position, sanitized_name),
                                               ((Argument*)(*arglist)[i])->value());
       }

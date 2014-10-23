@@ -178,11 +178,7 @@ namespace Sass {
                                   m->position(),
                                   m->length());
     for (size_t i = 0, L = m->length(); i < L; ++i) {
-      KeyValuePair* kvp = new (ctx.mem) KeyValuePair(m->path(),
-                                                      m->position(),
-                                                      (*m)[i]->key()->perform(this),
-                                                      (*m)[i]->value()->perform(this));
-      *mm << kvp;
+      *mm << make_pair((*m)[i].first->perform(this), (*m)[i].second->perform(this));
     }
     return mm;
   }
@@ -649,8 +645,8 @@ namespace Sass {
         Map* r = static_cast<Map*>(rhs);
         if (l->length() != r->length()) return false;
         for (size_t i = 0, L = l->length(); i < L; ++i) {
-          if (!eq((*l)[i]->key(), (*r)[i]->key(), ctx)) return false;
-          if (!eq((*l)[i]->value(), (*r)[i]->value(), ctx)) return false;
+          if (!eq((*l)[i].first, (*r)[i].first, ctx)) return false;
+          if (!eq((*l)[i].second, (*r)[i].second, ctx)) return false;
         }
         return true;
       } break;
@@ -874,7 +870,7 @@ namespace Sass {
       case SASS_MAP: {
         Map* m = new (ctx.mem) Map(path, position, v.map.length);
         for (size_t i = 0, L = v.map.length; i < L; ++i) {
-          *m << new (ctx.mem) KeyValuePair(path, position,
+          *m << make_pair(
             cval_to_astnode(v.map.pairs[i].key, ctx, backtrace, path, position),
             cval_to_astnode(v.map.pairs[i].value, ctx, backtrace, path, position));
         }

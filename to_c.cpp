@@ -32,8 +32,8 @@ namespace Sass {
   {
     Sass_Value v = make_sass_map(m->length());
     for (size_t i = 0, L = m->length(); i < L; ++i) {
-      v.map.pairs[i].key = (*m)[i]->key()->perform(this);
-      v.map.pairs[i].value = (*m)[i]->value()->perform(this);
+      v.map.pairs[i].key = (*m)[i].first->perform(this);
+      v.map.pairs[i].value = (*m)[i].second->perform(this);
     }
     return v;
   }

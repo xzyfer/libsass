@@ -1,3 +1,5 @@
+#ifndef SASS_INSPECT
+#define SASS_INSPECT
 #include <string>
 
 #ifndef SASS_OPERATION
@@ -96,3 +98,4 @@ namespace Sass {
   string quote(const string&, char);
 
 }
+#endif

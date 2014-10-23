@@ -788,10 +788,8 @@ namespace Sass {
       value = parse_space_list();
     }
 
-    KeyValuePair* pair = new (ctx.mem) KeyValuePair(path, source_position, key, value);
-
     Map* map = new (ctx.mem) Map(path, source_position, 1);
-    (*map) << pair;
+    (*map) << make_pair(key, value);
 
     while (lex< exactly<','> >())
     {
@@ -812,7 +810,7 @@ namespace Sass {
         value = parse_space_list();
       }
 
-      (*map) << new (ctx.mem) KeyValuePair(path, source_position, key, value);
+      (*map) << make_pair(key, value);
     }
 
     if (!lex< exactly<')'> >()) error("unclosed parenthesis 3");
