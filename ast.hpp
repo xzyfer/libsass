@@ -67,6 +67,66 @@
 namespace Sass {
   using namespace std;
 
+  //////////////////////////////////////////////////////////
+  // Abstract base class for all abstract syntax tree nodes.
+  //////////////////////////////////////////////////////////
+  class Block;
+  class Statement;
+  class Expression;
+  class Selector;
+  class AST_Node {
+    ADD_PROPERTY(string, path);
+    ADD_PROPERTY(Position, position);
+  public:
+    AST_Node(string path, Position position) : path_(path), position_(position) { }
+    virtual ~AST_Node() = 0;
+    // virtual Block* block() { return 0; }
+    ATTACH_OPERATIONS();
+  };
+  inline AST_Node::~AST_Node() { }
+
+  //////////////////////////////////////////////////////////////////////
+  // Abstract base class for expressions. This side of the AST hierarchy
+  // represents elements in value contexts, which exist primarily to be
+  // evaluated and returned.
+  //////////////////////////////////////////////////////////////////////
+  class Expression : public AST_Node {
+  public:
+    enum Concrete_Type {
+      NONE,
+      BOOLEAN,
+      NUMBER,
+      COLOR,
+      STRING,
+      LIST,
+      MAP,
+      NULL_VAL,
+      NUM_TYPES
+    };
+  private:
+    // expressions in some contexts shouldn't be evaluated
+    ADD_PROPERTY(bool, is_delayed);
+    ADD_PROPERTY(bool, is_interpolant);
+    ADD_PROPERTY(Concrete_Type, concrete_type);
+  public:
+    Expression(string path, Position position,
+               bool d = false, bool i = false, Concrete_Type ct = NONE)
+    : AST_Node(path, position),
+      is_delayed_(d), is_interpolant_(i), concrete_type_(ct)
+    { }
+    virtual operator bool() { return true; }
+    virtual ~Expression() = 0;
+    virtual string type() { return ""; /* TODO: raise an error? */ }
+    virtual bool is_invisible() { return false; }
+    static string type_name() { return ""; }
+    virtual bool is_false() { return false; }
+  };
+  inline Expression::~Expression() { }
+};
+
+namespace Sass {
+  using namespace std;
+
   /////////////////////////////////////////////////////////////////////////////
   // Mixin class for AST nodes that should behave like vectors. Uses the
   // "Template Method" design pattern to allow subclasses to adjust their flags
@@ -102,24 +162,6 @@ namespace Sass {
   };
   template <typename T>
   inline Vectorized<T>::~Vectorized() { }
-
-  //////////////////////////////////////////////////////////
-  // Abstract base class for all abstract syntax tree nodes.
-  //////////////////////////////////////////////////////////
-  class Block;
-  class Statement;
-  class Expression;
-  class Selector;
-  class AST_Node {
-    ADD_PROPERTY(string, path);
-    ADD_PROPERTY(Position, position);
-  public:
-    AST_Node(string path, Position position) : path_(path), position_(position) { }
-    virtual ~AST_Node() = 0;
-    // virtual Block* block() { return 0; }
-    ATTACH_OPERATIONS();
-  };
-  inline AST_Node::~AST_Node() { }
 
   /////////////////////////////////////////////////////////////////////////
   // Abstract base class for statements. This side of the AST hierarchy
@@ -501,44 +543,6 @@ namespace Sass {
     Content(string path, Position position) : Statement(path, position) { }
     ATTACH_OPERATIONS();
   };
-
-  //////////////////////////////////////////////////////////////////////
-  // Abstract base class for expressions. This side of the AST hierarchy
-  // represents elements in value contexts, which exist primarily to be
-  // evaluated and returned.
-  //////////////////////////////////////////////////////////////////////
-  class Expression : public AST_Node {
-  public:
-    enum Concrete_Type {
-      NONE,
-      BOOLEAN,
-      NUMBER,
-      COLOR,
-      STRING,
-      LIST,
-      MAP,
-      NULL_VAL,
-      NUM_TYPES
-    };
-  private:
-    // expressions in some contexts shouldn't be evaluated
-    ADD_PROPERTY(bool, is_delayed);
-    ADD_PROPERTY(bool, is_interpolant);
-    ADD_PROPERTY(Concrete_Type, concrete_type);
-  public:
-    Expression(string path, Position position,
-               bool d = false, bool i = false, Concrete_Type ct = NONE)
-    : AST_Node(path, position),
-      is_delayed_(d), is_interpolant_(i), concrete_type_(ct)
-    { }
-    virtual operator bool() { return true; }
-    virtual ~Expression() = 0;
-    virtual string type() { return ""; /* TODO: raise an error? */ }
-    virtual bool is_invisible() { return false; }
-    static string type_name() { return ""; }
-    virtual bool is_false() { return false; }
-  };
-  inline Expression::~Expression() { }
 
   ///////////////////////////////////////////////////////////////////////
   // Lists of values, both comma- and space-separated (distinguished by a
@@ -1123,10 +1127,10 @@ namespace Sass {
     virtual ~Simple_Selector() = 0;
     virtual Compound_Selector* unify_with(Compound_Selector*, Context&);
     virtual bool is_pseudo_element() { return false; }
-    
+
     bool operator==(const Simple_Selector& rhs) const;
     inline bool operator!=(const Simple_Selector& rhs) const { return !(*this == rhs); }
-    
+
     bool operator<(const Simple_Selector& rhs) const;
   };
   inline Simple_Selector::~Simple_Selector() { }
@@ -1261,7 +1265,7 @@ namespace Sass {
     { }
     ATTACH_OPERATIONS();
   };
-  
+
   struct Complex_Selector_Pointer_Compare {
     bool operator() (const Complex_Selector* const pLeft, const Complex_Selector* const pRight) const;
   };
@@ -1313,16 +1317,16 @@ namespace Sass {
              !static_cast<Selector_Reference*>((*this)[0])->selector();
     }
     vector<string> to_str_vec(); // sometimes need to convert to a flat "by-value" data structure
-    
+
     bool operator<(const Compound_Selector& rhs) const;
-    
+
     bool operator==(const Compound_Selector& rhs) const;
     inline bool operator!=(const Compound_Selector& rhs) const { return !(*this == rhs); }
 
     SourcesSet& sources() { return sources_; }
     void clearSources() { sources_.clear(); }
     void mergeSources(SourcesSet& sources, Context& ctx);
-    
+
     Compound_Selector* clone(Context&) const; // does not clone the Simple_Selector*s
 
     Compound_Selector* minus(Compound_Selector* rhs, Context& ctx);
@@ -1378,15 +1382,15 @@ namespace Sass {
       //s
 
       SourcesSet srcs;
-      
+
       Compound_Selector* pHead = head();
       Complex_Selector*  pTail = tail();
-      
+
       if (pHead) {
         SourcesSet& headSources = pHead->sources();
         srcs.insert(headSources.begin(), headSources.end());
       }
-      
+
       if (pTail) {
         SourcesSet tailSources = pTail->sources();
         srcs.insert(tailSources.begin(), tailSources.end());
@@ -1399,11 +1403,11 @@ namespace Sass {
       Complex_Selector* pIter = this;
       while (pIter) {
         Compound_Selector* pHead = pIter->head();
-        
+
         if (pHead) {
           pHead->mergeSources(sources, ctx);
         }
-        
+
         pIter = pIter->tail();
       }
     }
@@ -1411,11 +1415,11 @@ namespace Sass {
       Complex_Selector* pIter = this;
       while (pIter) {
         Compound_Selector* pHead = pIter->head();
-        
+
         if (pHead) {
           pHead->clearSources();
         }
-        
+
         pIter = pIter->tail();
       }
     }
@@ -1424,7 +1428,7 @@ namespace Sass {
     vector<Compound_Selector*> to_vector();
     ATTACH_OPERATIONS();
   };
-  
+
 	typedef deque<Complex_Selector*> ComplexSelectorDeque;
 
   ///////////////////////////////////
@@ -1452,8 +1456,8 @@ namespace Sass {
     // vector<Complex_Selector*> members() { return elements_; }
     ATTACH_OPERATIONS();
   };
-  
-  
+
+
   template<typename SelectorType>
   bool selectors_equal(const SelectorType& one, const SelectorType& two, bool simpleSelectorOrderDependent) {
   	// Test for equality among selectors while differentiating between checks that demand the underlying Simple_Selector
