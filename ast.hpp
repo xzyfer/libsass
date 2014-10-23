@@ -6,6 +6,7 @@
 #include <set>
 #include <algorithm>
 #include <deque>
+#include <unordered_map>
 
 #ifdef __clang__
 
@@ -114,6 +115,17 @@ namespace Sass {
     : AST_Node(path, position),
       is_delayed_(d), is_interpolant_(i), concrete_type_(ct)
     { }
+
+    virtual bool operator==( Expression& rhs) const
+    {
+      return false;
+    }
+
+    virtual size_t hash() const
+    {
+      return 0;
+    }
+
     virtual operator bool() { return true; }
     virtual ~Expression() = 0;
     virtual string type() { return ""; /* TODO: raise an error? */ }
@@ -123,6 +135,29 @@ namespace Sass {
   };
   inline Expression::~Expression() { }
 };
+
+/////////////////////////////////////////////////////////////////////////////
+// Hash method specializations for unordered_map to work with Sass::Expression
+/////////////////////////////////////////////////////////////////////////////
+
+namespace std {
+  template<>
+  struct hash<Sass::Expression*>
+  {
+    size_t operator()(const Sass::Expression* s) const
+    {
+      return s->hash();
+    }
+  };
+  template<>
+  struct equal_to<Sass::Expression*>
+  {
+    bool operator()( Sass::Expression* lhs,  Sass::Expression* rhs) const
+    {
+      return *lhs == *rhs;
+    }
+  };
+}
 
 namespace Sass {
   using namespace std;
@@ -162,6 +197,52 @@ namespace Sass {
   };
   template <typename T>
   inline Vectorized<T>::~Vectorized() { }
+
+  /////////////////////////////////////////////////////////////////////////////
+  // Mixin class for AST nodes that should behave hash table. Uses an extra
+  // <vector> internally to maintain insertion order for interation.
+  /////////////////////////////////////////////////////////////////////////////
+  class Hashed {
+  private:
+    unordered_map<Expression*, Expression*> elements_;
+    vector<Expression*> list_;
+  protected:
+    size_t hash_;
+    void reset_hash() { hash_ = 0; }
+  public:
+    Hashed(size_t s = 0) : elements_(unordered_map<Expression*, Expression*>(s)), list_(vector<Expression*>())
+    { elements_.reserve(s); list_.reserve(s); }
+    virtual ~Hashed();
+    size_t length() const                  { return list_.size(); }
+    bool empty() const                     { return list_.empty(); }
+    bool has(Expression* k) const          { return elements_.count(k) == 1; }
+    Expression* at(Expression* k) const    { return elements_.at(k); }
+    Hashed& operator<<(pair<Expression*, Expression*> p)
+    {
+      reset_hash();
+
+      if (!has(p.first)) list_.push_back(p.first);
+
+      elements_[p.first] = p.second;
+      return *this;
+    }
+    Hashed& operator+=(Hashed* h)
+    {
+      if (length() == 0) {
+        this->elements_ = h->elements_;
+        this->list_ = h->list_;
+        return *this;
+      }
+
+      for (auto key : h->keys()) {
+        *this << make_pair(key, h->at(key));
+      }
+      return *this;
+    }
+    const unordered_map<Expression*, Expression*>& pairs() const { return elements_; }
+    const vector<Expression*>& keys() const { return list_; }
+  };
+  inline Hashed::~Hashed() { }
 
   /////////////////////////////////////////////////////////////////////////
   // Abstract base class for statements. This side of the AST hierarchy
