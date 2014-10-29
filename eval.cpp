@@ -463,19 +463,23 @@ namespace Sass {
       case Textual::NUMBER:
         result = new (ctx.mem) Number(t->path(),
                                       t->position(),
-                                      atof(t->value().c_str()));
+                                      atof(t->value().c_str()),
+                                      "",
+                                      t->value().find_first_of(".") != 0);
         break;
       case Textual::PERCENTAGE:
         result = new (ctx.mem) Number(t->path(),
                                       t->position(),
                                       atof(t->value().c_str()),
-                                      "%");
+                                      "%",
+                                      t->value().find_first_of(".") != 0);
         break;
       case Textual::DIMENSION:
         result = new (ctx.mem) Number(t->path(),
                                       t->position(),
                                       atof(t->value().c_str()),
-                                      Token(number(t->value().c_str())));
+                                      Token(number(t->value().c_str())),
+                                      t->value().find_first_of(".") != 0);
         break;
       case Textual::HEX: {
         string hext(t->value().substr(1)); // chop off the '#'

@@ -853,9 +853,10 @@ namespace Sass {
     ADD_PROPERTY(double, value);
     vector<string> numerator_units_;
     vector<string> denominator_units_;
+    bool preserve_integer_;
     size_t hash_;
   public:
-    Number(string path, Position position, double val, string u = "")
+    Number(string path, Position position, double val, string u = "", bool i = true)
     : Expression(path, position),
       value_(val),
       numerator_units_(vector<string>()),
@@ -863,10 +864,12 @@ namespace Sass {
       hash_(0)
     {
       if (!u.empty()) numerator_units_.push_back(u);
+      preserve_integer_ = i;
       concrete_type(NUMBER);
     }
     vector<string>& numerator_units()   { return numerator_units_; }
     vector<string>& denominator_units() { return denominator_units_; }
+    bool preserve_integer() { return preserve_integer_; }
     string type() { return "number"; }
     static string type_name() { return "number"; }
     string unit() const
