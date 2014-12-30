@@ -284,7 +284,7 @@ namespace Sass {
 
     buffer.erase(buffer.length()-1);
     if (ctx) ctx->source_map.remove_line();
-    append_to_buffer(" }\n");
+    append_to_buffer(" }");
   }
 
   void Output_Nested::operator()(At_Rule* a)
