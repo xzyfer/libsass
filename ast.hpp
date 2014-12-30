@@ -275,6 +275,7 @@ namespace Sass {
     virtual ~Statement() = 0;
     // needed for rearranging nested rulesets during CSS emission
     virtual bool   is_hoistable() { return false; }
+    virtual bool   bubbles() { return false; }
     virtual Block* block()  { return 0; }
   };
   inline Statement::~Statement() { }
@@ -371,6 +372,7 @@ namespace Sass {
     : Has_Block(path, position, b), media_queries_(mqs), selector_(0)
     { statement_type(MEDIA); }
     bool is_hoistable() { return true; }
+    bool bubbles() { return true; }
     ATTACH_OPERATIONS();
   };
 

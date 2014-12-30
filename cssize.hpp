@@ -74,6 +74,10 @@ namespace Sass {
     Statement* flatten(Media_Block*);
     Statement* flatten(Block*);
     Statement* flatten(Statement*);
+    bool bubblable(Statement*);
+
+    List* merge_media_queries(Media_Block*, Media_Block*);
+    Media_Query* merge_media_query(Media_Query*, Media_Query*);
 
     // Bubble* bubble(Media_Block*);
     void append_block(Block*);
