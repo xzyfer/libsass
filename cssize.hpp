@@ -61,9 +61,6 @@ namespace Sass {
     // Statement* operator()(Mixin_Call*);
     // Statement* operator()(Content*);
 
-    template <typename U>
-    Statement* fallback(U x) { return fallback_impl(x); }
-
     Statement* parent();
     vector<pair<bool, Block*>> slice_by_bubble(Statement*);
     Statement* bubble(Media_Block*);
@@ -73,6 +70,9 @@ namespace Sass {
 
     List* merge_media_queries(Media_Block*, Media_Block*);
     Media_Query* merge_media_query(Media_Query*, Media_Query*);
+
+    template <typename U>
+    Statement* fallback(U x) { return fallback_impl(x); }
 
     void append_block(Block*);
   };
