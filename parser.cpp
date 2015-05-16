@@ -1367,9 +1367,9 @@ namespace Sass {
     { return new (ctx.mem) Null(pstate); }
 
     if (lex< identifier >()) {
-      String_Constant* str = new (ctx.mem) String_Quoted(pstate, lexed);
+      String_Constant* str = new (ctx.mem) String_Constant(pstate, lexed);
       // Dont' delay this string if it is a name color. Fixes #652.
-      str->is_delayed(ctx.names_to_colors.count(unquote(lexed)) == 0);
+      str->is_delayed(ctx.names_to_colors.count(lexed) == 0);
       return str;
     }
 
@@ -1411,10 +1411,15 @@ namespace Sass {
     // see if there any interpolants
     const char* p = find_first_in_interval< exactly<hash_lbrace> >(i, chunk.end);
     if (!p) {
-      String_Quoted* str_quoted = new (ctx.mem) String_Quoted(pstate, string(i, chunk.end));
-      if (!constant && str_quoted->quote_mark()) str_quoted->quote_mark('*');
-      str_quoted->is_delayed(true);
-      return str_quoted;
+      if (!constant) {
+        String_Quoted* str = new (ctx.mem) String_Quoted(pstate, string(i, chunk.end));
+        if (str->quote_mark()) str->quote_mark('*');
+        str->is_delayed(true);
+        return str;
+      } else {
+        String_Constant* str = new (ctx.mem) String_Constant(pstate, string(i, chunk.end));
+        return str;
+      }
     }
 
     String_Schema* schema = new (ctx.mem) String_Schema(pstate);
@@ -1846,7 +1851,7 @@ namespace Sass {
     else if (lex< exactly< only_kwd > >()) media_query->is_restricted(true);
 
     if (peek< identifier_schema >()) media_query->media_type(parse_identifier_schema());
-    else if (lex< identifier >())    media_query->media_type(parse_interpolated_chunk(lexed));
+    else if (lex< identifier >())    media_query->media_type(parse_interpolated_chunk(lexed, true));
     else                             (*media_query) << parse_media_expression();
 
     while (lex< exactly< and_kwd > >()) (*media_query) << parse_media_expression();
