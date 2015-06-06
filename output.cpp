@@ -196,11 +196,11 @@ namespace Sass {
     append_scope_closer();
   }
 
-  void Output::operator()(Feature_Block* f)
+  void Output::operator()(Supports_Block* f)
   {
     if (f->is_invisible()) return;
 
-    Feature_Query* q    = f->feature_queries();
+    Supports_Query* q    = f->queries();
     Block* b            = f->block();
 
     // Filter out feature blocks that aren't printable (process its children though)
@@ -381,18 +381,14 @@ namespace Sass {
 
   void Output::operator()(String_Constant* s)
   {
-    if (String_Quoted* quoted = dynamic_cast<String_Quoted*>(s)) {
-      return Output::operator()(quoted);
+    string value(s->value());
+    if (s->can_compress_whitespace() && output_style() == COMPRESSED) {
+      value.erase(std::remove_if(value.begin(), value.end(), ::isspace), value.end());
+    }
+    if (!in_comment) {
+      append_token(string_to_output(value), s);
     } else {
-      string value(s->value());
-      if (s->can_compress_whitespace() && output_style() == COMPRESSED) {
-        value.erase(std::remove_if(value.begin(), value.end(), ::isspace), value.end());
-      }
-      if (!in_comment) {
-        append_token(string_to_output(value), s);
-      } else {
-        append_token(value, s);
-      }
+      append_token(value, s);
     }
   }
 
