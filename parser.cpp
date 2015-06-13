@@ -1384,8 +1384,7 @@ namespace Sass {
     if (lex< kwd_important >())
     { return new (ctx.mem) String_Quoted(pstate, "!important"); }
 
-    const char* stop;
-    if ((stop = peek< value_schema >()))
+    if (const char* stop = peek< value_schema >())
     { return parse_value_schema(stop); }
 
     // string may be interpolated
