@@ -1378,6 +1378,21 @@ namespace Sass {
     }
   }
 
+  Argument* Arguments::get_rest_argument()
+  {
+    Argument* arg = 0;
+    if (this->has_rest_argument()) {
+      for (auto a : this->elements()) {
+        if (a->is_rest_argument()) {
+          arg = a;
+          break;
+        }
+      }
+    }
+
+    return arg;
+  }
+
   void Arguments::adjust_after_pushing(Argument* a)
   {
     if (!a->name().empty()) {

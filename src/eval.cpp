@@ -24,6 +24,8 @@
 #include "parser.hpp"
 #include "expand.hpp"
 #include "color_maps.hpp"
+#include "debug.hpp"
+#include "debugger.hpp"
 
 namespace Sass {
 
@@ -371,6 +373,7 @@ namespace Sass {
   Expression* Eval::operator()(Debug* d)
   {
     Expression* message = d->value()->perform(this);
+    // debug_ast(message);
     To_String to_string(&ctx, false, true);
     Env* env = exp.environment();
 
@@ -652,9 +655,12 @@ namespace Sass {
     std::string name(Util::normalize_underscores(c->name()));
     std::string full_name(name + "[f]");
     Arguments* args = c->arguments();
+    // debug_ast(args);
+
     if (full_name != "if[f]") {
       args = static_cast<Arguments*>(args->perform(this));
     }
+    // debug_ast(args);
 
     Env* env = environment();
     if (!env->has(full_name)) {
@@ -812,6 +818,8 @@ namespace Sass {
     else if (value->concrete_type() == Expression::SELECTOR) {
       value = value->perform(this); // ->perform(&listize);
     }
+
+    // debug_ast(value);
 
     // std::cerr << "\ttype is now: " << typeid(*value).name() << std::endl << std::endl;
     return value;
@@ -1180,10 +1188,62 @@ namespace Sass {
 
   Expression* Eval::operator()(Arguments* a)
   {
+      // DEBUG_PRINTLN(ALL, "------");
+      // debug_ast(a);
     Arguments* aa = SASS_MEMORY_NEW(ctx.mem, Arguments, a->pstate());
+      // debug_ast(aa);
     for (size_t i = 0, L = a->length(); i < L; ++i) {
-      *aa << static_cast<Argument*>((*a)[i]->perform(this));
+      Argument* arg = static_cast<Argument*>((*a)[i]->perform(this));
+      // List* ls = dynamic_cast<List*>(arg->value());
+
+      // debug_ast(arg);
+      // debug_ast(ls);
+      // DEBUG_PRINTLN(ALL, "is list? " << (ls ? "y" : "n"));
+
+      // if (arg->is_rest_argument() && ls) {
+      if (arg->is_rest_argument()) {
+        // for (size_t j = 0, M = ls->length(); j < M; ++j) {
+        //   Expression* ex = (*ls)[j]->perform(this);
+        //   if (Argument* as = dynamic_cast<Argument*>(ex)) {
+        //    *aa << as;
+        //   } else {
+        //     *aa << SASS_MEMORY_NEW(ctx.mem, Argument, ex->pstate(), ex);
+        //   }
+        // }
+      } else {
+        *aa << arg;
+      }
     }
+
+    if (a->has_rest_argument()) {
+      Expression* splat = static_cast<Argument*>(
+                            a->get_rest_argument()->perform(this)
+                          )->value()->perform(this);
+
+      List* ls = dynamic_cast<List*>(splat);
+      Map* ms = dynamic_cast<Map*>(splat);
+
+      List* arglist = SASS_MEMORY_NEW(ctx.mem, List,
+                                      splat->pstate(),
+                                      0,
+                                      ls ? ls->separator() : SASS_COMMA,
+                                      true);
+
+      if (ls && ls->is_arglist()) {
+        for (auto as : *ls) *arglist << as;
+        *aa << SASS_MEMORY_NEW(ctx.mem, Argument, splat->pstate(), arglist);
+      } else if (ms) {
+        *aa << SASS_MEMORY_NEW(ctx.mem, Argument, splat->pstate(), ms);
+      } else if (ls) {
+        for (auto as : *ls) *arglist << as;
+        *aa << SASS_MEMORY_NEW(ctx.mem, Argument, splat->pstate(), arglist);
+      } else {
+        *aa << SASS_MEMORY_NEW(ctx.mem, Argument, splat->pstate(), splat);
+      }
+    }
+
+    // debug_ast(aa);
+
     return aa;
   }
 

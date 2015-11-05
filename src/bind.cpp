@@ -6,12 +6,19 @@
 #include <iostream>
 #include <sstream>
 #include "to_string.hpp"
+#include "debug.hpp"
+#include "debugger.hpp"
 
 namespace Sass {
 
   void bind(std::string type, std::string name, Parameters* ps, Arguments* as, Context* ctx, Env* env, Eval* eval)
   {
     std::string callee(type + " " + name);
+
+    DEBUG_PRINTLN(ALL, callee);
+    debug_ast(ps);
+    debug_ast(as);
+
     Listize listize(*ctx);
     std::map<std::string, Parameter*> param_map;
 
@@ -128,25 +135,27 @@ namespace Sass {
             // skip any list completely if empty
             if (ls && ls->empty() && a->is_rest_argument()) continue;
             // flatten all nested arglists
-            if (ls && ls->is_arglist()) {
-              for (size_t i = 0, L = ls->size(); i < L; ++i) {
-                // already have a wrapped argument
-                if (Argument* arg = dynamic_cast<Argument*>((*ls)[i])) {
-                  (*arglist) << SASS_MEMORY_NEW(ctx->mem, Argument, *arg);
-                }
-                // wrap all other value types into Argument
-                else {
-                  (*arglist) << SASS_MEMORY_NEW(ctx->mem, Argument,
-                                                (*ls)[i]->pstate(),
-                                                (*ls)[i],
-                                                "",
-                                                false,
-                                                false);
-                }
-              }
-            }
-            // already have a wrapped argument
-            else if (Argument* arg = dynamic_cast<Argument*>(a->value())) {
+            // if (ls && ls->is_arglist()) {
+            //   arglist->separator(ls->separator());
+            //   for (size_t i = 0, L = ls->size(); i < L; ++i) {
+            //     // already have a wrapped argument
+            //     if (Argument* arg = dynamic_cast<Argument*>((*ls)[i])) {
+            //       (*arglist) << SASS_MEMORY_NEW(ctx->mem, Argument, *arg);
+            //     }
+            //     // wrap all other value types into Argument
+            //     else {
+            //       (*arglist) << SASS_MEMORY_NEW(ctx->mem, Argument,
+            //                                     (*ls)[i]->pstate(),
+            //                                     (*ls)[i],
+            //                                     "",
+            //                                     false,
+            //                                     false);
+            //     }
+            //   }
+            // }
+            // // already have a wrapped argument
+            // else
+              if (Argument* arg = dynamic_cast<Argument*>(a->value())) {
               (*arglist) << SASS_MEMORY_NEW(ctx->mem, Argument, *arg);
             }
             // wrap all other value types into Argument
