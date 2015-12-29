@@ -1188,8 +1188,9 @@ namespace Sass {
 
   Expression* Eval::operator()(Arguments* a)
   {
-      // DEBUG_PRINTLN(ALL, "------");
+      DEBUG_PRINTLN(ALL, "------");
       // debug_ast(a);
+
     Arguments* aa = SASS_MEMORY_NEW(ctx.mem, Arguments, a->pstate());
       // debug_ast(aa);
     for (size_t i = 0, L = a->length(); i < L; ++i) {
@@ -1215,35 +1216,39 @@ namespace Sass {
       }
     }
 
+
     if (a->has_rest_argument()) {
       Expression* splat = static_cast<Argument*>(
                             a->get_rest_argument()->perform(this)
                           )->value()->perform(this);
 
+      // debug_ast(splat);
+
+      Sass_Separator separator = SASS_COMMA;
       List* ls = dynamic_cast<List*>(splat);
       Map* ms = dynamic_cast<Map*>(splat);
 
       List* arglist = SASS_MEMORY_NEW(ctx.mem, List,
                                       splat->pstate(),
                                       0,
-                                      ls ? ls->separator() : SASS_COMMA,
+                                      ls ? ls->separator() : separator,
                                       true);
 
       if (ls && ls->is_arglist()) {
         for (auto as : *ls) *arglist << as;
-        *aa << SASS_MEMORY_NEW(ctx.mem, Argument, splat->pstate(), arglist);
       } else if (ms) {
-        *aa << SASS_MEMORY_NEW(ctx.mem, Argument, splat->pstate(), ms);
+        *arglist << ms;
       } else if (ls) {
         for (auto as : *ls) *arglist << as;
-        *aa << SASS_MEMORY_NEW(ctx.mem, Argument, splat->pstate(), arglist);
       } else {
-        *aa << SASS_MEMORY_NEW(ctx.mem, Argument, splat->pstate(), splat);
+        *arglist << splat;
       }
+      *aa << SASS_MEMORY_NEW(ctx.mem, Argument, splat->pstate(), arglist, "", true);
     }
 
     // debug_ast(aa);
 
+    DEBUG_PRINTLN(ALL, "------");
     return aa;
   }
 

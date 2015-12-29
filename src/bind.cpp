@@ -16,8 +16,8 @@ namespace Sass {
     std::string callee(type + " " + name);
 
     DEBUG_PRINTLN(ALL, callee);
-    debug_ast(ps);
-    debug_ast(as);
+    // debug_ast(ps);
+    // debug_ast(as);
 
     Listize listize(*ctx);
     std::map<std::string, Parameter*> param_map;
