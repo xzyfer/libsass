@@ -16,7 +16,7 @@ namespace Sass {
     bool has_shown_deprecated_bind = false;
     std::string callee(type + " " + name);
 
-    DEBUG_PRINTLN(ALL, callee);
+    // DEBUG_PRINTLN(ALL, callee);
     // debug_ast(ps);
     // debug_ast(as);
 
@@ -47,8 +47,8 @@ namespace Sass {
     size_t ip = 0, LP = ps->length();
     size_t ia = 0, LA = as->length();
     while (ia < LA) {
-    DEBUG_PRINTLN(ALL, "ip: " << ip << " LP: " << LP);
-    DEBUG_PRINTLN(ALL, "ia: " << ia << " LA: " << LA);
+    // DEBUG_PRINTLN(ALL, "ip: " << ip << " LP: " << LP);
+    // DEBUG_PRINTLN(ALL, "ia: " << ia << " LA: " << LA);
       Argument* a = (*as)[ia];
       if (ip >= LP) {
         // skip empty rest arguments
@@ -66,7 +66,7 @@ namespace Sass {
       }
       Parameter* p = (*ps)[ip];
 
-      DEBUG_PRINTLN(ALL, "before:");
+      // DEBUG_PRINTLN(ALL, "before:");
       // debug_ast(a);
 
       // If the current parameter is the rest parameter, process and break the loop
@@ -250,7 +250,7 @@ namespace Sass {
         ++ia;
       }
 
-      DEBUG_PRINTLN(ALL, "after:");
+      // DEBUG_PRINTLN(ALL, "after:");
       // debug_ast(a);
 
       if (a->name().empty()) {
@@ -260,7 +260,7 @@ namespace Sass {
           << " provided more than once in call to " << callee;
           error(msg.str(), a->pstate());
         }
-        DEBUG_PRINTLN(ALL, "assigning " << p->name() << ": ");
+        // DEBUG_PRINTLN(ALL, "assigning " << p->name() << ": ");
         // debug_ast(a);
         // ordinal arg -- bind it to the next param
         env->local_frame()[p->name()] = a->value();

@@ -1188,7 +1188,7 @@ namespace Sass {
 
   Expression* Eval::operator()(Arguments* a)
   {
-      DEBUG_PRINTLN(ALL, "------");
+      // DEBUG_PRINTLN(ALL, "------");
       // debug_ast(a);
 
     Arguments* aa = SASS_MEMORY_NEW(ctx.mem, Arguments, a->pstate());
@@ -1248,7 +1248,7 @@ namespace Sass {
 
     // debug_ast(aa);
 
-    DEBUG_PRINTLN(ALL, "------");
+    // DEBUG_PRINTLN(ALL, "------");
     return aa;
   }
 
