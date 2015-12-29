@@ -13,6 +13,7 @@ namespace Sass {
 
   void bind(std::string type, std::string name, Parameters* ps, Arguments* as, Context* ctx, Env* env, Eval* eval)
   {
+    bool has_shown_deprecated_bind = false;
     std::string callee(type + " " + name);
 
     DEBUG_PRINTLN(ALL, callee);
@@ -46,6 +47,8 @@ namespace Sass {
     size_t ip = 0, LP = ps->length();
     size_t ia = 0, LA = as->length();
     while (ia < LA) {
+    DEBUG_PRINTLN(ALL, "ip: " << ip << " LP: " << LP);
+    DEBUG_PRINTLN(ALL, "ia: " << ia << " LA: " << LA);
       Argument* a = (*as)[ia];
       if (ip >= LP) {
         // skip empty rest arguments
@@ -62,6 +65,9 @@ namespace Sass {
         return error(msg.str(), as->pstate());
       }
       Parameter* p = (*ps)[ip];
+
+      DEBUG_PRINTLN(ALL, "before:");
+      // debug_ast(a);
 
       // If the current parameter is the rest parameter, process and break the loop
       if (p->is_rest_parameter()) {
@@ -190,11 +196,12 @@ namespace Sass {
       else if (a->is_rest_argument()) {
         // normal param and rest arg
         List* arglist = static_cast<List*>(a->value());
+
         // empty rest arg - treat all args as default values
         if (!arglist->length()) {
           break;
-        } else {
-          if (arglist->length() + ia > LP && !ps->has_rest_parameter()) {
+        } else if(!has_shown_deprecated_bind) {
+          if (arglist->length() > LP - ip && !ps->has_rest_parameter()) {
             int arg_count = (arglist->length() + LA - 1);
             std::stringstream msg;
             msg << callee << " takes " << LP;
@@ -202,8 +209,14 @@ namespace Sass {
             msg << " but " << arg_count;
             msg << (arg_count == 1 ? " was passed" : " were passed.");
             deprecated_bind(msg.str(), as->pstate());
+            has_shown_deprecated_bind = true;
           }
         }
+
+        while (arglist->length() > LP - ip) {
+          arglist->elements().erase(arglist->elements().end() - 1);
+        }
+
         // otherwise move one of the rest args into the param, converting to argument if necessary
         if (!(a = dynamic_cast<Argument*>((*arglist)[0]))) {
           Expression* a_to_convert = (*arglist)[0];
@@ -237,6 +250,9 @@ namespace Sass {
         ++ia;
       }
 
+      DEBUG_PRINTLN(ALL, "after:");
+      // debug_ast(a);
+
       if (a->name().empty()) {
         if (env->has_local(p->name())) {
           std::stringstream msg;
@@ -244,6 +260,8 @@ namespace Sass {
           << " provided more than once in call to " << callee;
           error(msg.str(), a->pstate());
         }
+        DEBUG_PRINTLN(ALL, "assigning " << p->name() << ": ");
+        // debug_ast(a);
         // ordinal arg -- bind it to the next param
         env->local_frame()[p->name()] = a->value();
         ++ip;
