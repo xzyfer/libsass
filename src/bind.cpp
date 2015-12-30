@@ -94,15 +94,6 @@ namespace Sass {
                                               rest->separator(),
                                               true);
 
-              for (size_t j = LP - 1; j < rest->length(); j++) {
-                (*arglist) << SASS_MEMORY_NEW(ctx->mem, Argument,
-                                              (*rest)[j]->pstate(),
-                                              (*rest)[j],
-                                              "",
-                                              false,
-                                              false);
-              }
-
               // wrap each item from list as an argument
               for (Expression* item : rest->elements()) {
                 (*arglist) << SASS_MEMORY_NEW(ctx->mem, Argument,
@@ -114,6 +105,9 @@ namespace Sass {
               }
               // assign new arglist to environment
               env->local_frame()[p->name()] = arglist;
+
+          // DEBUG_PRINTLN(ALL, "assigning " << p->name() << ": ");
+          // debug_ast(arglist);
             }
           // }
           // invalid state
@@ -216,6 +210,9 @@ namespace Sass {
           }
           // assign new arglist to environment
           env->local_frame()[p->name()] = arglist;
+
+          // DEBUG_PRINTLN(ALL, "assigning " << p->name() << ": ");
+          // debug_ast(arglist);
         }
         // consumed parameter
         ++ip;
