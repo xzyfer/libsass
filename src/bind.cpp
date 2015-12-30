@@ -96,12 +96,16 @@ namespace Sass {
 
               // wrap each item from list as an argument
               for (Expression* item : rest->elements()) {
-                (*arglist) << SASS_MEMORY_NEW(ctx->mem, Argument,
-                                              item->pstate(),
-                                              item,
-                                              "",
-                                              false,
-                                              false);
+                if (Argument* arg = dynamic_cast<Argument*>(item)) {
+                  (*arglist) << SASS_MEMORY_NEW(ctx->mem, Argument, *arg);
+                } else {
+                  (*arglist) << SASS_MEMORY_NEW(ctx->mem, Argument,
+                                                item->pstate(),
+                                                item,
+                                                "",
+                                                false,
+                                                false);
+                }
               }
               // assign new arglist to environment
               env->local_frame()[p->name()] = arglist;
