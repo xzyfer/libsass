@@ -1202,7 +1202,8 @@ namespace Sass {
       // DEBUG_PRINTLN(ALL, "is list? " << (ls ? "y" : "n"));
 
       // if (arg->is_rest_argument() && ls) {
-      if (arg->is_rest_argument()) {
+      if (arg->is_rest_argument() || arg->is_keyword_argument()) {
+        // aa->has_rest_argument(true);
         // for (size_t j = 0, M = ls->length(); j < M; ++j) {
         //   Expression* ex = (*ls)[j]->perform(this);
         //   if (Argument* as = dynamic_cast<Argument*>(ex)) {
@@ -1215,6 +1216,8 @@ namespace Sass {
         *aa << arg;
       }
     }
+
+    // debug_ast(aa);
 
 
     if (a->has_rest_argument()) {
@@ -1237,14 +1240,18 @@ namespace Sass {
       if (ls && ls->is_arglist()) {
         for (auto as : *ls) *arglist << as;
       } else if (ms) {
-        *arglist << ms;
+        *aa << SASS_MEMORY_NEW(ctx.mem, Argument, splat->pstate(), ms, "", false, true);
       } else if (ls) {
         for (auto as : *ls) *arglist << as;
       } else {
         *arglist << splat;
       }
-      *aa << SASS_MEMORY_NEW(ctx.mem, Argument, splat->pstate(), arglist, "", true);
+      if (arglist->length()) {
+        *aa << SASS_MEMORY_NEW(ctx.mem, Argument, splat->pstate(), arglist, "", true);
+      }
     }
+
+
 
     // debug_ast(aa);
     // DEBUG_PRINTLN(ALL, "------");
