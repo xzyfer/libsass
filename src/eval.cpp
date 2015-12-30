@@ -1203,7 +1203,6 @@ namespace Sass {
 
       // if (arg->is_rest_argument() && ls) {
       if (arg->is_rest_argument() || arg->is_keyword_argument()) {
-        // aa->has_rest_argument(true);
         // for (size_t j = 0, M = ls->length(); j < M; ++j) {
         //   Expression* ex = (*ls)[j]->perform(this);
         //   if (Argument* as = dynamic_cast<Argument*>(ex)) {
@@ -1224,8 +1223,6 @@ namespace Sass {
       Expression* splat = static_cast<Argument*>(
                             a->get_rest_argument()->perform(this)
                           )->value()->perform(this);
-
-      // debug_ast(splat);
 
       Sass_Separator separator = SASS_COMMA;
       List* ls = dynamic_cast<List*>(splat);

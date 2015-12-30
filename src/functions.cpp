@@ -10,6 +10,7 @@
 #include "eval.hpp"
 #include "util.hpp"
 #include "expand.hpp"
+#include "debug.hpp"
 #include "debugger.hpp"
 #include "utf8_string.hpp"
 #include "sass/base.h"
@@ -1607,6 +1608,9 @@ namespace Sass {
       std::string name = Util::normalize_underscores(unquote(ARG("$name", String_Constant)->value()));
       List* arglist = SASS_MEMORY_NEW(ctx.mem, List, *ARG("$args", List));
 
+    // DEBUG_PRINTLN(ALL, name);
+    // debug_ast(arglist);
+
       // debug_ast(arglist);
       Arguments* args = SASS_MEMORY_NEW(ctx.mem, Arguments, pstate);
       // std::string full_name(name + "[f]");
@@ -1621,13 +1625,15 @@ namespace Sass {
         //   List* list = dynamic_cast<List*>(expr);
         //   if (list && p && !p->is_rest_parameter()) expr = (*list)[0];
         // }
-        List* ll = dynamic_cast<List*>(expr);
-        if (ll && ll->is_arglist()) {
-          for (size_t j = 0, L = ll->length(); j < L; ++j) {
-            *args << SASS_MEMORY_NEW(ctx.mem, Argument, pstate, (*ll)[j]);
-          }
-        }
-        else if (arglist->is_arglist()) {
+
+        // List* ll = dynamic_cast<List*>(expr);
+        // if (ll && ll->is_arglist()) {
+        //   for (size_t j = 0, L = ll->length(); j < L; ++j) {
+        //     *args << SASS_MEMORY_NEW(ctx.mem, Argument, pstate, (*ll)[j]);
+        //   }
+        // }
+        // else
+        if (arglist->is_arglist()) {
           Argument* arg = dynamic_cast<Argument*>((*arglist)[i]);
           *args << SASS_MEMORY_NEW(ctx.mem, Argument,
                                    pstate,
@@ -1639,6 +1645,7 @@ namespace Sass {
           *args << SASS_MEMORY_NEW(ctx.mem, Argument, pstate, expr);
         }
       }
+
       // debug_ast(args);
       Function_Call* func = SASS_MEMORY_NEW(ctx.mem, Function_Call, pstate, name, args);
       Expand expand(ctx, &d_env, backtrace);
