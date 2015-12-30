@@ -1393,6 +1393,21 @@ namespace Sass {
     return arg;
   }
 
+  Argument* Arguments::get_keyword_argument()
+  {
+    Argument* arg = 0;
+    if (this->has_keyword_argument()) {
+      for (auto a : this->elements()) {
+        if (a->is_keyword_argument()) {
+          arg = a;
+          break;
+        }
+      }
+    }
+
+    return arg;
+  }
+
   void Arguments::adjust_after_pushing(Argument* a)
   {
     if (!a->name().empty()) {

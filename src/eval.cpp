@@ -1251,7 +1251,13 @@ namespace Sass {
       }
     }
 
+    if (a->has_keyword_argument()) {
+      Expression* kwarg = static_cast<Argument*>(
+                            a->get_keyword_argument()->perform(this)
+                          )->value()->perform(this);
 
+      *aa << SASS_MEMORY_NEW(ctx.mem, Argument, kwarg->pstate(), kwarg, "", false, true);
+    }
 
     // debug_ast(aa);
     // DEBUG_PRINTLN(ALL, "------");
