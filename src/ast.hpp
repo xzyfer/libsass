@@ -2279,6 +2279,7 @@ namespace Sass {
         return (*this)[0];
       return 0;
     }
+    Compound_Selector* resolve_parent_refs(Context& ctx, Selector_List* super_cseq);
     virtual bool is_superselector_of(Compound_Selector* sub, std::string wrapped = "");
     virtual bool is_superselector_of(Complex_Selector* sub, std::string wrapped = "");
     virtual bool is_superselector_of(Selector_List* sub, std::string wrapped = "");

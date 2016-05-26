@@ -8,6 +8,7 @@
 #include "backtrace.hpp"
 #include "context.hpp"
 #include "parser.hpp"
+#include "debugger.hpp"
 
 namespace Sass {
 
@@ -104,24 +105,37 @@ namespace Sass {
     LOCAL_FLAG(at_root_without_rule, false);
 
     // do some special checks for the base level rules
-    if (r->is_root()) {
-      if (Selector_List* selector_list = dynamic_cast<Selector_List*>(r->selector())) {
-        for (Complex_Selector* complex_selector : selector_list->elements()) {
-          Complex_Selector* tail = complex_selector;
-          while (tail) {
-            if (tail->head()) for (Simple_Selector* header : tail->head()->elements()) {
-              if (dynamic_cast<Parent_Selector*>(header) == NULL) continue; // skip all others
-              std::string sel_str(complex_selector->to_string(ctx.c_options));
-              error("Base-level rules cannot contain the parent-selector-referencing character '&'.", header->pstate(), backtrace());
-            }
-            tail = tail->tail();
-          }
-        }
-      }
-    }
+    // if (r->is_root()) {
+    //   if (Selector_List* selector_list = dynamic_cast<Selector_List*>(r->selector())) {
+    //     for (Complex_Selector* complex_selector : selector_list->elements()) {
+    //       Complex_Selector* tail = complex_selector;
+    //       while (tail) {
+    //         if (tail->head()) for (Simple_Selector* header : tail->head()->elements()) {
+    //           if (dynamic_cast<Parent_Selector*>(header) == NULL) continue; // skip all others
+    //           std::string sel_str(complex_selector->to_string(ctx.c_options));
+    //           error("Base-level rules cannot contain the parent-selector-referencing character '&'.", header->pstate(), backtrace());
+    //         }
+    //         tail = tail->tail();
+    //       }
+    //     }
+    //   }
+    // }
+
+                                        std::cerr << "old_at_root_without_rule: ";
+    if (this->old_at_root_without_rule) std::cerr << "true " << std::endl;
+    else                                std::cerr << "false " << std::endl;
+    std::cerr << "---- selector ----" << std::endl;
+    debug_ast(r->selector());
+    std::cerr << "------------------" << std::endl;
+    std::cerr << "---- parent ----" << std::endl;
+    debug_ast(selector());
+    std::cerr << "------------------" << std::endl;
 
     Expression* ex = r->selector()->perform(&eval);
     Selector_List* sel = dynamic_cast<Selector_List*>(ex);
+    std::cerr << "---- eval ----" << std::endl;
+    debug_ast(sel);
+    std::cerr << "------------------" << std::endl;
     if (sel == 0) throw std::runtime_error("Expanded null selector");
 
     if (sel->length() == 0 || sel->has_parent_ref()) {

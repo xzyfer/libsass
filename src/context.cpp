@@ -29,6 +29,7 @@
 #include "sass2scss.h"
 #include "prelexer.hpp"
 #include "emitter.hpp"
+#include "debugger.hpp"
 
 namespace Sass {
   using namespace Constants;
@@ -650,14 +651,19 @@ namespace Sass {
     Expand expand(*this, &global, &backtrace);
     Cssize cssize(*this, &backtrace);
     CheckNesting check_nesting;
+    // debug_ast(root);
     // check nesting
     root->perform(&check_nesting)->block();
     // expand and eval the tree
+    debug_ast(root);
     root = root->perform(&expand)->block();
+    // debug_ast(root);
     // check nesting
     root->perform(&check_nesting)->block();
     // merge and bubble certain rules
+    // debug_ast(root);
     root = root->perform(&cssize)->block();
+    // debug_ast(root);
     // should we extend something?
     if (!subset_map.empty()) {
       // create crtp visitor object
@@ -665,11 +671,13 @@ namespace Sass {
       // extend tree nodes
       root->perform(&extend);
     }
+    // debug_ast(root);
 
     // clean up by removing empty placeholders
     // ToDo: maybe we can do this somewhere else?
     Remove_Placeholders remove_placeholders(*this);
     root->perform(&remove_placeholders);
+    // debug_ast(root);
     // return processed tree
     return root;
   }

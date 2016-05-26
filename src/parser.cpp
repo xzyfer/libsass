@@ -11,6 +11,7 @@
 #include "color_maps.hpp"
 #include "sass/functions.h"
 #include "error_handling.hpp"
+#include "debugger.hpp"
 
 // Notes about delayed: some ast nodes can have delayed evaluation so
 // they can preserve their original semantics if needed. This is most
@@ -660,6 +661,8 @@ namespace Sass {
       lhs = parse_compound_selector();
     }
 
+    // debug_ast(lhs);
+
     // check for end of file condition
     if (peek < end_of_file >()) return 0;
 
@@ -701,26 +704,26 @@ namespace Sass {
       }
     }
 
-    // add a parent selector if we are not in a root
-    // also skip adding parent ref if we only have refs
-    if (!sel->has_parent_ref() && !in_at_root && !in_root) {
-      // create the objects to wrap parent selector reference
-      Parent_Selector* parent = SASS_MEMORY_NEW(ctx.mem, Parent_Selector, pstate);
-      parent->media_block(last_media_block);
-      Compound_Selector* head = SASS_MEMORY_NEW(ctx.mem, Compound_Selector, pstate);
-      head->media_block(last_media_block);
-      // add simple selector
-      (*head) << parent;
-      // selector may not have any head yet
-      if (!sel->head()) { sel->head(head); }
-      // otherwise we need to create a new complex selector and set the old one as its tail
-      else {
-        sel = SASS_MEMORY_NEW(ctx.mem, Complex_Selector, pstate, Complex_Selector::ANCESTOR_OF, head, sel);
-        sel->media_block(last_media_block);
-      }
-      // peek for linefeed and remember result on head
-      // if (peek_newline()) head->has_line_break(true);
-    }
+    // // add a parent selector if we are not in a root
+    // // also skip adding parent ref if we only have refs
+    // if (!sel->has_parent_ref() && !in_at_root && !in_root) {
+    //   // create the objects to wrap parent selector reference
+    //   Parent_Selector* parent = SASS_MEMORY_NEW(ctx.mem, Parent_Selector, pstate);
+    //   parent->media_block(last_media_block);
+    //   Compound_Selector* head = SASS_MEMORY_NEW(ctx.mem, Compound_Selector, pstate);
+    //   head->media_block(last_media_block);
+    //   // add simple selector
+    //   (*head) << parent;
+    //   // selector may not have any head yet
+    //   if (!sel->head()) { sel->head(head); }
+    //   // otherwise we need to create a new complex selector and set the old one as its tail
+    //   else {
+    //     sel = SASS_MEMORY_NEW(ctx.mem, Complex_Selector, pstate, Complex_Selector::ANCESTOR_OF, head, sel);
+    //     sel->media_block(last_media_block);
+    //   }
+    //   // peek for linefeed and remember result on head
+    //   // if (peek_newline()) head->has_line_break(true);
+    // }
 
     // complex selector
     return sel;

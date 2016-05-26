@@ -68,11 +68,8 @@ namespace Sass {
       }
       return bb;
     }
-    else if (dd->value() && !dd->value()->is_invisible()) {
-      return dd;
-    }
 
-    return 0;
+    return dd;
   }
 
   Statement* Cssize::operator()(Directive* r)

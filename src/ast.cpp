@@ -5,6 +5,7 @@
 #include "extend.hpp"
 #include "emitter.hpp"
 #include "color_maps.hpp"
+#include "debugger.hpp"
 #include <set>
 #include <iomanip>
 #include <iostream>
@@ -1084,28 +1085,96 @@ namespace Sass {
 
   }
 
-  Selector_List* Selector_List::resolve_parent_refs(Context& ctx, Selector_List* ps, bool implicit_parent)
+  Compound_Selector* Compound_Selector::resolve_parent_refs(Context& ctx, Selector_List* super_cseq)
   {
-    if (!this->has_parent_ref() && !implicit_parent) return this;
-    Selector_List* ss = SASS_MEMORY_NEW(ctx.mem, Selector_List, pstate());
-    for (size_t pi = 0, pL = ps->length(); pi < pL; ++pi) {
-      Selector_List* list = SASS_MEMORY_NEW(ctx.mem, Selector_List, pstate());
-      *list << (*ps)[pi];
-      for (size_t si = 0, sL = this->length(); si < sL; ++si) {
-        *ss += (*this)[si]->resolve_parent_refs(ctx, list, implicit_parent);
+    Compound_Selector* resolved_members = SASS_MEMORY_NEW(ctx.mem, Compound_Selector, pstate());
+
+    for (auto sel : *this) {
+      if (!dynamic_cast<Wrapped_Selector*>(sel)) {
+        *resolved_members << sel;
+      // } else {
+      //   sel->with_selector(sel->selector->resolve_parent_refs(ctx, super_cseq, false));
       }
     }
+
+    if (resolved_members->length()) {
+      if (!(Parent_Selector* parent = dynamic_cast<Parent_Selector*>(resolved_members[0]))) {
+        Selector_List* sl = SASS_MEMORY_NEW(ctx.mem, Selector_List, pstate());
+        Complex_Selector* cs = SASS_MEMORY_NEW(ctx.mem, Complex_Selector, pstate());
+        cs->head(cm);
+        *sl << cs;
+        return sl;
+      }
+    }
+  }
+
+  Selector_List* Selector_List::resolve_parent_refs(Context& ctx, Selector_List* super_cseq, bool implicit_parent)
+  {
+    std::cerr << "----- Selector_List::resolve_parent_refs -----" << std::endl;
+
+    if (!super_cseq) {
+      std::cerr << "has_parent_ref: ";
+      if (this->has_parent_ref()) {
+        std::cerr << "true" << std::endl;
+        error("Base-level rules cannot contain the parent-selector-referencing character '&'.", pstate_);
+      }
+      std::cerr << "false" << std::endl;
+      return this;
+    }
+    Selector_List* ss = SASS_MEMORY_NEW(ctx.mem, Selector_List, pstate());
+    // for (size_t pi = 0, pL = super_cseq->length(); pi < pL; ++pi) {
+      // Selector_List* list = SASS_MEMORY_NEW(ctx.mem, Selector_List, pstate());
+      // *list << (*super_cseq)[pi];
+      for (size_t si = 0, sL = this->length(); si < sL; ++si) {
+        *ss += (*this)[si]->resolve_parent_refs(ctx, super_cseq, implicit_parent);
+      }
+    // }
     return ss;
   }
 
-  Selector_List* Complex_Selector::resolve_parent_refs(Context& ctx, Selector_List* parents, bool implicit_parent)
+  Selector_List* Complex_Selector::resolve_parent_refs(Context& ctx, Selector_List* super_cseq, bool implicit_parent)
   {
+    std::cerr << "----- Complex_Selector::resolve_parent_refs -----" << std::endl;
+
+    bool contains_parent_ref = this->has_parent_ref();
+    if (!contains_parent_ref && !implicit_parent) {
+      Selector_List* ss = SASS_MEMORY_NEW(ctx.mem, Selector_List, pstate());
+      *ss << this;
+      return ss;
+    }
+
+    if (!contains_parent_ref) {
+      Compound_Selector* old_head = this->head();
+
+      Complex_Selector* foo = SASS_MEMORY_NEW(ctx.mem, Complex_Selector, pstate());
+      *foo->head(old_head->clone(ctx));
+      this->tail(foo);
+
+      Compound_Selector* new_head = SASS_MEMORY_NEW(ctx.mem, Compound_Selector, pstate());
+      *new_head << SASS_MEMORY_NEW(ctx.mem, Parent_Selector, pstate());
+      // *new_head << foo;
+
+      // Compound_Selector* head = old_head->clone(ctx);
+      // head->unshift(SASS_MEMORY_NEW(ctx.mem, Parent_Selector, pstate()));
+      this->head(new_head);
+    }
+
+    std::cerr << "----- Complex_Selector::this->head()->unshift -----" << std::endl;
+    debug_ast(this);
+    // error("yolo", pstate_);
 
     Complex_Selector* tail = this->tail();
     Compound_Selector* head = this->head();
 
+    // if (head && head->length() > 0) {
+    //   head->resolve_parent_refs(ctx, super_cseq)
+    // } else {
+
+    // }
+
+
     // first resolve_parent_refs the tail (which may return an expanded list)
-    Selector_List* tails = tail ? tail->resolve_parent_refs(ctx, parents, implicit_parent) : 0;
+    Selector_List* tails = tail ? tail->resolve_parent_refs(ctx, super_cseq, implicit_parent) : 0;
 
     if (head && head->length() > 0) {
 
@@ -1114,12 +1183,12 @@ namespace Sass {
       // mix parent complex selector into the compound list
       if (dynamic_cast<Parent_Selector*>((*head)[0])) {
         retval = SASS_MEMORY_NEW(ctx.mem, Selector_List, pstate());
-        if (parents && parents->length()) {
+        if (super_cseq && super_cseq->length()) {
           if (tails && tails->length() > 0) {
             for (size_t n = 0, nL = tails->length(); n < nL; ++n) {
-              for (size_t i = 0, iL = parents->length(); i < iL; ++i) {
+              for (size_t i = 0, iL = super_cseq->length(); i < iL; ++i) {
                 Complex_Selector* t = (*tails)[n];
-                Complex_Selector* parent = (*parents)[i];
+                Complex_Selector* parent = (*super_cseq)[i];
                 Complex_Selector* s = parent->cloneFully(ctx);
                 Complex_Selector* ss = this->clone(ctx);
                 ss->tail(t ? t->clone(ctx) : 0);
@@ -1134,8 +1203,8 @@ namespace Sass {
           // have no tails but parents
           // loop above is inside out
           else {
-            for (size_t i = 0, iL = parents->length(); i < iL; ++i) {
-              Complex_Selector* parent = (*parents)[i];
+            for (size_t i = 0, iL = super_cseq->length(); i < iL; ++i) {
+              Complex_Selector* parent = (*super_cseq)[i];
               Complex_Selector* s = parent->cloneFully(ctx);
               Complex_Selector* ss = this->clone(ctx);
               // this is only if valid if the parent has no trailing op
@@ -1186,7 +1255,7 @@ namespace Sass {
       for (Simple_Selector* ss : *head) {
         if (Wrapped_Selector* ws = dynamic_cast<Wrapped_Selector*>(ss)) {
           if (Selector_List* sl = dynamic_cast<Selector_List*>(ws->selector())) {
-            if (parents) ws->selector(sl->resolve_parent_refs(ctx, parents, implicit_parent));
+            if (super_cseq) ws->selector(sl->resolve_parent_refs(ctx, super_cseq, implicit_parent));
           }
         }
       }
@@ -1303,6 +1372,9 @@ namespace Sass {
     Complex_Selector* cpy = SASS_MEMORY_NEW(ctx.mem, Complex_Selector, *this);
     cpy->is_optional(this->is_optional());
     cpy->media_block(this->media_block());
+    cpy->has_placeholder(this->has_placeholder());
+    cpy->has_line_feed(this->has_line_feed());
+    cpy->has_line_break(this->has_line_break());
     if (tail()) cpy->tail(tail()->clone(ctx));
     return cpy;
   }
@@ -1312,6 +1384,9 @@ namespace Sass {
     Complex_Selector* cpy = SASS_MEMORY_NEW(ctx.mem, Complex_Selector, *this);
     cpy->is_optional(this->is_optional());
     cpy->media_block(this->media_block());
+    cpy->has_placeholder(this->has_placeholder());
+    cpy->has_line_feed(this->has_line_feed());
+    cpy->has_line_break(this->has_line_break());
     if (head()) {
       cpy->head(head()->clone(ctx));
     }
@@ -1329,6 +1404,9 @@ namespace Sass {
     cpy->is_optional(this->is_optional());
     cpy->media_block(this->media_block());
     cpy->extended(this->extended());
+    cpy->has_placeholder(this->has_placeholder());
+    cpy->has_line_feed(this->has_line_feed());
+    cpy->has_line_break(this->has_line_break());
     return cpy;
   }
 
@@ -1337,6 +1415,9 @@ namespace Sass {
     Selector_List* cpy = SASS_MEMORY_NEW(ctx.mem, Selector_List, *this);
     cpy->is_optional(this->is_optional());
     cpy->media_block(this->media_block());
+    cpy->has_placeholder(this->has_placeholder());
+    cpy->has_line_feed(this->has_line_feed());
+    cpy->has_line_break(this->has_line_break());
     return cpy;
   }
 
@@ -1345,6 +1426,9 @@ namespace Sass {
     Selector_List* cpy = SASS_MEMORY_NEW(ctx.mem, Selector_List, pstate());
     cpy->is_optional(this->is_optional());
     cpy->media_block(this->media_block());
+    cpy->has_placeholder(this->has_placeholder());
+    cpy->has_line_feed(this->has_line_feed());
+    cpy->has_line_break(this->has_line_break());
     for (size_t i = 0, L = length(); i < L; ++i) {
       *cpy << (*this)[i]->cloneFully(ctx);
     }

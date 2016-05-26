@@ -409,6 +409,36 @@ namespace Sass {
   namespace Util {
     using std::string;
 
+    std::vector<std::string> strip_string_array(std::vector<std::string> arr)
+    {
+      if (arr.size()) {
+        const std::string first = arr.front();
+        const std::string last = arr.back();
+        arr.front() = ltrim(first);
+        arr.back() = rtrim(last);
+      }
+      return arr;
+    }
+
+    std::vector<std::string> merge_adjacent_strings(std::vector<std::string> arr)
+    {
+      if (arr.size() < 2) return arr;
+      std::string str = "";
+      for (auto s : arr) str += s;
+      std::vector<std::string> new_arr;
+      new_arr.push_back(str);
+      return new_arr;
+    }
+
+    std::string ltrim(const std::string &str) {
+      std::string trimmed = str;
+      size_t pos_ws = trimmed.find_first_not_of(" \t\n\v\f\r");
+      if (pos_ws != std::string::npos)
+      { trimmed.erase(0, pos_ws); }
+      else { trimmed.clear(); }
+      return trimmed;
+    }
+
     std::string rtrim(const std::string &str) {
       std::string trimmed = str;
       size_t pos_ws = trimmed.find_last_not_of(" \t\n\v\f\r");
@@ -522,8 +552,6 @@ namespace Sass {
       }
 
       Block* b = f->block();
-
-//      bool hasSelectors = f->selector() && static_cast<Selector_List*>(f->selector())->length() > 0;
 
       bool hasDeclarations = false;
       bool hasPrintableChildBlocks = false;
@@ -667,9 +695,9 @@ namespace Sass {
       }
     }
 
-     bool isAscii(const char chr) {
-       return unsigned(chr) < 128;
-     }
+    bool isAscii(const char chr) {
+      return unsigned(chr) < 128;
+    }
 
   }
 }

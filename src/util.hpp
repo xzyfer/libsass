@@ -39,6 +39,10 @@ namespace Sass {
 
   namespace Util {
 
+    std::vector<std::string> strip_string_array(std::vector<std::string> arr);
+    std::vector<std::string> merge_adjacent_strings(std::vector<std::string> arr);
+
+    std::string ltrim(const std::string& str);
     std::string rtrim(const std::string& str);
 
     std::string normalize_underscores(const std::string& str);
