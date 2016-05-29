@@ -1544,7 +1544,7 @@ namespace Sass {
     return result;
   }
 
-  void SimpleSequence_Selector::mergeSources(SourcesSet& sources, Context& ctx)
+  void SimpleSequence_Selector::with_more_sources(Context& ctx, SourcesSet& sources)
   {
     for (SourcesSet::iterator iterator = sources.begin(), endIterator = sources.end(); iterator != endIterator; ++iterator) {
       this->sources_.insert((*iterator)->clone(ctx));

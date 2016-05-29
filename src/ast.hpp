@@ -2338,7 +2338,7 @@ namespace Sass {
 
     SourcesSet& sources() { return sources_; }
     void clearSources() { sources_.clear(); }
-    void mergeSources(SourcesSet& sources, Context& ctx);
+    void with_more_sources(Context& ctx, SourcesSet& sources);
 
     SimpleSequence_Selector* clone(Context&) const; // does not clone the Simple_Selector*s
 
@@ -2351,7 +2351,12 @@ namespace Sass {
   // CSS selector combinators (">", "+", "~", and whitespace). Essentially a
   // linked list.
   ////////////////////////////////////////////////////////////////////////////
-  class Sequence_Selector : public Selector {
+  inline size_t Sequence_Child::hash() {
+    if (sel) return sel->hash();
+    return 0;
+  }
+
+  class Sequence_Selector : public Selector, public Vectorized<Sequence_Child*> {
   public:
     enum Combinator { ANCESTOR_OF, PARENT_OF, PRECEDES, ADJACENT_TO, REFERENCE };
   private:
@@ -2363,6 +2368,11 @@ namespace Sass {
     bool contains_placeholder() {
       if (head() && head()->contains_placeholder()) return true;
       if (tail() && tail()->contains_placeholder()) return true;
+      if (this->elements().size()) {
+        for (Sequence_Child* i : *this) {
+          if (i->sel && i->sel->has_placeholder()) return true;
+        }
+      }
       return false;
     };
     Sequence_Selector(ParserState pstate,
@@ -2371,6 +2381,7 @@ namespace Sass {
                      Sequence_Selector* t = 0,
                      String* r = 0)
     : Selector(pstate),
+      Vectorized<Sequence_Child*>(),
       combinator_(c),
       head_(h), tail_(t),
       reference_(r)
@@ -2432,27 +2443,51 @@ namespace Sass {
     void set_innermost(Sequence_Selector*, Combinator);
     virtual size_t hash()
     {
-      if (hash_ == 0) {
-        hash_combine(hash_, std::hash<int>()(SELECTOR));
-        hash_combine(hash_, std::hash<int>()(combinator_));
-        if (head_) hash_combine(hash_, head_->hash());
-        if (tail_) hash_combine(hash_, tail_->hash());
+      if (Selector::hash_ == 0) {
+        hash_combine(Selector::hash_, std::hash<int>()(SELECTOR));
+        hash_combine(Selector::hash_, std::hash<int>()(combinator_));
+        if (head_) hash_combine(Selector::hash_, head_->hash());
+        if (tail_) hash_combine(Selector::hash_, tail_->hash());
+        if (this->elements().size()) {
+          for (Sequence_Child* el : *this) {
+            if (el->sel) hash_combine(Selector::hash_, el->sel->hash());
+            if (el->comb) hash_combine(Selector::hash_, std::hash<int>()(el->comb));
+          }
+        }
       }
-      return hash_;
+      return Selector::hash_;
     }
     virtual unsigned long specificity() const
     {
       int sum = 0;
+      if (this->elements().size()) {
+        for (auto i : *this) {
+          if (i->sel) sum += i->sel->specificity();
+        }
+        return sum;
+      }
       if (head()) sum += head()->specificity();
       if (tail()) sum += tail()->specificity();
       return sum;
     }
     virtual void set_media_block(Media_Block* mb) {
       media_block(mb);
+      if (this->elements().size()) {
+        for (auto i : *this) {
+          i->sel->set_media_block(mb);
+        }
+        return;
+      }
       if (tail_) tail_->set_media_block(mb);
       if (head_) head_->set_media_block(mb);
     }
     virtual bool has_wrapped_selector() {
+      if (this->elements().size()) {
+        for (auto i : *this) {
+          if (i->sel->has_wrapped_selector()) return true;
+        }
+        return false;
+      }
       if (head_ && head_->has_wrapped_selector()) return true;
       if (tail_ && tail_->has_wrapped_selector()) return true;
       return false;
@@ -2467,6 +2502,16 @@ namespace Sass {
       //s
 
       SourcesSet srcs;
+
+      if (this->elements().size()) {
+        for (auto i : *this) {
+          if (i->sel && i->sel->has_wrapped_selector()) {
+            SourcesSet src = i->sel->sources();
+            srcs.insert(src.begin(), src.end());
+          }
+        }
+        return srcs;
+      }
 
       SimpleSequence_Selector* pHead = head();
       Sequence_Selector*  pTail = tail();
@@ -2484,19 +2529,44 @@ namespace Sass {
       return srcs;
     }
     void addSources(SourcesSet& sources, Context& ctx) {
+      std::vector<Sequence_Child*> s;
+      if (this->elements().size()) {
+        for (auto i : *this) {
+          if (i->sel) {
+            i->sel->with_more_sources(ctx, sources);
+          } else {
+            s.push_back(i);
+          }
+        }
+        this->elements(s);
+        return;
+      }
+
+
+
       // members.map! {|m| m.is_a?(SimpleSequence) ? m.with_more_sources(sources) : m}
       Sequence_Selector* pIter = this;
       while (pIter) {
         SimpleSequence_Selector* pHead = pIter->head();
 
         if (pHead) {
-          pHead->mergeSources(sources, ctx);
+          pHead->with_more_sources(ctx, sources);
         }
 
         pIter = pIter->tail();
       }
     }
     void clearSources() {
+      if (this->elements().size()) {
+        for (auto i : *this) {
+          if (i->sel) {
+            i->sel->clearSources();
+          }
+        }
+        return;
+      }
+
+
       Sequence_Selector* pIter = this;
       while (pIter) {
         SimpleSequence_Selector* pHead = pIter->head();

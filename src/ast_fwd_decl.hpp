@@ -84,6 +84,14 @@ namespace Sass {
   class Sequence_Selector;
   class CommaSequence_Selector;
 
+  enum Selector_Combinator { ANCESTOR_OF, PARENT_OF, PRECEDES, ADJACENT_TO, REFERENCE };
+
+  struct Sequence_Child {
+    SimpleSequence_Selector* sel;
+    Selector_Combinator comb;
+    size_t hash();
+  };
+
   // common classes
   class Context;
 
