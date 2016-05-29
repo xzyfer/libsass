@@ -2365,29 +2365,6 @@ namespace Sass {
     ADD_PROPERTY(Sequence_Selector*, tail)
     ADD_PROPERTY(String*, reference);
   public:
-    Combinator comb() {
-      if (this->elements().size()) {
-        std::string c = *(this->elements()[0])->comb;
-        if (!c && this->elements().size() > 1) {
-          c = *(this->elements()[1])->comb;
-        }
-        switch (c) {
-          case " ":
-            return Combinator::ANCESTOR_OF;
-          case ">":
-            return Combinator::PARENT_OF;
-          case "~":
-            return Combinator::PRECEDES;
-          case "+":
-            return Combinator::ADJACENT_TO;
-          case "/":
-            return Combinator::REFERENCE;
-        }
-        return NULL;
-      } else {
-        return combinator_;
-      }
-    };
     bool contains_placeholder() {
       if (head() && head()->contains_placeholder()) return true;
       if (tail() && tail()->contains_placeholder()) return true;
