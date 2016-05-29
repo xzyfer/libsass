@@ -2365,6 +2365,29 @@ namespace Sass {
     ADD_PROPERTY(Sequence_Selector*, tail)
     ADD_PROPERTY(String*, reference);
   public:
+    Combinator comb() {
+      if (this->elements().size()) {
+        std::string c = *(this->elements()[0])->comb;
+        if (!c && this->elements().size() > 1) {
+          c = *(this->elements()[1])->comb;
+        }
+        switch (c) {
+          case " ":
+            return Combinator::ANCESTOR_OF;
+          case ">":
+            return Combinator::PARENT_OF;
+          case "~":
+            return Combinator::PRECEDES;
+          case "+":
+            return Combinator::ADJACENT_TO;
+          case "/":
+            return Combinator::REFERENCE;
+        }
+        return NULL;
+      } else {
+        return combinator_;
+      }
+    };
     bool contains_placeholder() {
       if (head() && head()->contains_placeholder()) return true;
       if (tail() && tail()->contains_placeholder()) return true;
@@ -2407,6 +2430,9 @@ namespace Sass {
     // can still have a tail
     bool is_empty_ancestor() const
     {
+      if (this->elements().size()) {
+        return this->elements().size() && this->elements().front()->comb && *(this->elements().front()->comb) == " ";
+      }
       return (!head() || head()->length() == 0) &&
              combinator() == Combinator::ANCESTOR_OF;
     }
@@ -2451,7 +2477,7 @@ namespace Sass {
         if (this->elements().size()) {
           for (Sequence_Child* el : *this) {
             if (el->sel) hash_combine(Selector::hash_, el->sel->hash());
-            if (el->comb) hash_combine(Selector::hash_, std::hash<int>()(el->comb));
+            if (el->comb) hash_combine(Selector::hash_, std::hash<std::string*>()(el->comb));
           }
         }
       }

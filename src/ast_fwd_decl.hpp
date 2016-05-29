@@ -88,8 +88,10 @@ namespace Sass {
 
   struct Sequence_Child {
     SimpleSequence_Selector* sel;
-    Selector_Combinator comb;
+    std::string* comb;
     size_t hash();
+    Sequence_Child(SimpleSequence_Selector* s) { sel = s; };
+    Sequence_Child(std::string* c) { comb = c; };
   };
 
   // common classes

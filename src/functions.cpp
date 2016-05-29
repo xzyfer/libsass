@@ -1808,10 +1808,27 @@ namespace Sass {
           for (size_t j = 0, childLen = child->length(); j < childLen; ++j) {
             Sequence_Selector* parentSeqClone = (*result)[i]->cloneFully(ctx);
             Sequence_Selector* childSeq = (*child)[j];
-            Sequence_Selector* base = childSeq->tail();
+            Sequence_Selector* base = nullptr;
+            std::string comb = "";
+
+            if (childSeq->elements().size()) {
+              if (childSeq->elements()[0]->comb) {
+                comb = *(childSeq->elements()[0])->comb;
+              }
+              else if (childSeq->elements().size() > 1 && (childSeq->elements()[1])->comb) {
+                comb = *(childSeq->elements()[1])->comb;
+              }
+            }
+            else {
+              base = childSeq->tail();
+
+              if (childSeq->combinator() == Sequence_Selector::Combinator::ANCESTOR_OF) {
+                comb = " ";
+              }
+            }
 
             // Must be a simple sequence
-            if( childSeq->combinator() != Sequence_Selector::Combinator::ANCESTOR_OF ) {
+            if (comb != "" && comb != " ") {
               std::string msg("Can't append  `");
               msg += childSeq->to_string();
               msg += "` to `";
@@ -1833,11 +1850,15 @@ namespace Sass {
 
             // TODO: Add check for namespace stuff
 
-            // append any selectors in childSeq's head
-            *(parentSeqClone->innermost()->head()) += (base->head());
-
-            // Set parentSeqClone new tail
-            parentSeqClone->innermost()->tail( base->tail() );
+            if (childSeq->elements().size()) {
+              *parentSeqClone += childSeq;
+            }
+            else {
+              // append any selectors in childSeq's head
+              *(parentSeqClone->innermost()->head()) += (base->head());
+              // Set parentSeqClone new tail
+              parentSeqClone->innermost()->tail( base->tail() );
+            }
 
             newElements.push_back(parentSeqClone);
           }

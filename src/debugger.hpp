@@ -120,21 +120,33 @@ inline void debug_ast(AST_Node* node, std::string ind, Env* env)
       << (selector->has_line_feed() ? " [line-feed]": " -")
       << (selector->has_line_break() ? " [line-break]": " -")
       << " -- ";
-      std::string del;
-      switch (selector->combinator()) {
-        case Sequence_Selector::PARENT_OF:   del = ">"; break;
-        case Sequence_Selector::PRECEDES:    del = "~"; break;
-        case Sequence_Selector::ADJACENT_TO: del = "+"; break;
-        case Sequence_Selector::ANCESTOR_OF: del = " "; break;
-        case Sequence_Selector::REFERENCE:   del = "//"; break;
-      }
-      // if (del = "/") del += selector->reference()->perform(&to_string) + "/";
+
     std::cerr << " <" << prettyprint(selector->pstate().token.ws_before()) << ">" << std::endl;
-    debug_ast(selector->head(), ind + " " /* + "[" + del + "]" */, env);
-    if (selector->tail()) {
-      debug_ast(selector->tail(), ind + "{" + del + "}", env);
-    } else if(del != " ") {
-      std::cerr << ind << " |" << del << "| {trailing op}" << std::endl;
+
+    if (selector->elements().size()) {
+      for (Selector_Child* i : *selector) {
+        if (i->comb) {
+          std::cerr << ind << *(i->comb) << std::endl;
+        }
+        else if (i->sel) {
+          debug_ast(i->sel, ind + " ", env);
+        }
+      }
+    } else {
+        std::string del;
+        switch (selector->combinator()) {
+          case Sequence_Selector::PARENT_OF:   del = ">"; break;
+          case Sequence_Selector::PRECEDES:    del = "~"; break;
+          case Sequence_Selector::ADJACENT_TO: del = "+"; break;
+          case Sequence_Selector::ANCESTOR_OF: del = " "; break;
+          case Sequence_Selector::REFERENCE:   del = "//"; break;
+        }
+      debug_ast(selector->head(), ind + " " /* + "[" + del + "]" */, env);
+      if (selector->tail()) {
+        debug_ast(selector->tail(), ind + "{" + del + "}", env);
+      } else if(del != " ") {
+        std::cerr << ind << " |" << del << "| {trailing op}" << std::endl;
+      }
     }
     SourcesSet set = selector->sources();
     // debug_sources_set(set, ind + "  @--> ");

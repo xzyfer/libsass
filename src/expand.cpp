@@ -107,14 +107,28 @@ namespace Sass {
     if (r->is_root()) {
       if (CommaSequence_Selector* selector_list = dynamic_cast<CommaSequence_Selector*>(r->selector())) {
         for (Sequence_Selector* complex_selector : selector_list->elements()) {
-          Sequence_Selector* tail = complex_selector;
-          while (tail) {
-            if (tail->head()) for (Simple_Selector* header : tail->head()->elements()) {
-              if (dynamic_cast<Parent_Selector*>(header) == NULL) continue; // skip all others
-              std::string sel_str(complex_selector->to_string(ctx.c_options));
-              error("Base-level rules cannot contain the parent-selector-referencing character '&'.", header->pstate(), backtrace());
+          Sequence_Selector* sel = complex_selector;
+          if (sel->elements().size()) {
+            for (Sequence_Child* i : *sel) {
+              if (i->sel) {
+                for (Simple_Selector* header : *i->sel) {
+                  if (dynamic_cast<Parent_Selector*>(header) == NULL) continue; // skip all others
+                  std::string sel_str(complex_selector->to_string(ctx.c_options));
+                  error("Base-level rules cannot contain the parent-selector-referencing character '&'.", header->pstate(), backtrace());
+                }
+              }
             }
-            tail = tail->tail();
+          } else {
+            while (sel) {
+              if (sel->head()) {
+                for (Simple_Selector* header : sel->head()->elements()) {
+                  if (dynamic_cast<Parent_Selector*>(header) == NULL) continue; // skip all others
+                  std::string sel_str(complex_selector->to_string(ctx.c_options));
+                  error("Base-level rules cannot contain the parent-selector-referencing character '&'.", header->pstate(), backtrace());
+                }
+              }
+              sel = sel->tail();
+            }
           }
         }
       }
@@ -556,14 +570,29 @@ namespace Sass {
 
     if (CommaSequence_Selector* sl = dynamic_cast<CommaSequence_Selector*>(s)) {
       for (Sequence_Selector* complex_selector : sl->elements()) {
-        Sequence_Selector* tail = complex_selector;
-        while (tail) {
-          if (tail->head()) for (Simple_Selector* header : tail->head()->elements()) {
-            if (dynamic_cast<Parent_Selector*>(header) == NULL) continue; // skip all others
-            std::string sel_str(complex_selector->to_string(ctx.c_options));
-            error("Can't extend " + sel_str + ": can't extend parent selectors", header->pstate(), backtrace());
+        Sequence_Selector* sel = complex_selector;
+        if (sel->elements().size()) {
+            for (Sequence_Child* i : *sel) {
+              if (i->sel) {
+                for (Simple_Selector* header : *i->sel) {
+                  if (dynamic_cast<Parent_Selector*>(header) == NULL) continue; // skip all others
+                  std::string sel_str(complex_selector->to_string(ctx.c_options));
+                  error("Can't extend " + sel_str + ": can't extend parent selectors", header->pstate(), backtrace());
+                }
+              }
+            }
+        }
+        else {
+          while (sel) {
+            if (sel->head()) {
+              for (Simple_Selector* header : sel->head()->elements()) {
+                if (dynamic_cast<Parent_Selector*>(header) == NULL) continue; // skip all others
+                std::string sel_str(complex_selector->to_string(ctx.c_options));
+                error("Can't extend " + sel_str + ": can't extend parent selectors", header->pstate(), backtrace());
+              }
+            }
+            sel = sel->tail();
           }
-          tail = tail->tail();
         }
       }
     }
@@ -573,16 +602,26 @@ namespace Sass {
     if (contextualized == NULL) return;
     for (auto complex_sel : contextualized->elements()) {
       Sequence_Selector* c = complex_sel;
-      if (!c->head() || c->tail()) {
-        std::string sel_str(contextualized->to_string(ctx.c_options));
-        error("Can't extend " + sel_str + ": can't extend nested selectors", c->pstate(), backtrace());
+      if (c->elements().size()) {
+        if (c->elements().size() != 1) {
+          std::string sel_str(contextualized->to_string(ctx.c_options));
+          error("Can't extend " + sel_str + ": can't extend nested selectors", c->pstate(), backtrace());
+        }
+      }
+      else {
+        if (!c->head() || c->tail()) {
+          std::string sel_str(contextualized->to_string(ctx.c_options));
+          error("Can't extend " + sel_str + ": can't extend nested selectors", c->pstate(), backtrace());
+        }
       }
       SimpleSequence_Selector* placeholder = c->head();
       if (contextualized->is_optional()) placeholder->is_optional(true);
       for (size_t i = 0, L = extender->length(); i < L; ++i) {
         Sequence_Selector* sel = (*extender)[i];
-        if (!(sel->head() && sel->head()->length() > 0 &&
-            dynamic_cast<Parent_Selector*>((*sel->head())[0])))
+        if (
+          (!(sel->elements().size() && sel->elements().front()->sel && dynamic_cast<Parent_Selector*>((*sel->elements().front()->sel)[0]))) ||
+          (!(sel->head() && sel->head()->length() > 0 && dynamic_cast<Parent_Selector*>((*sel->head())[0])))
+        )
         {
           SimpleSequence_Selector* hh = SASS_MEMORY_NEW(ctx.mem, SimpleSequence_Selector, (*extender)[i]->pstate());
           hh->media_block((*extender)[i]->media_block());
@@ -612,8 +651,17 @@ namespace Sass {
       }
       if (CommaSequence_Selector* sl = dynamic_cast<CommaSequence_Selector*>(s)) {
         for (Sequence_Selector* cs : *sl) {
-          if (cs != NULL && cs->head() != NULL) {
-            cs->head()->media_block(media_block_stack.back());
+          if (cs != NULL) {
+            if (cs->elements().size()) {
+              if (cs->elements().front()->sel != NULL) {
+                cs->elements().front()->sel->media_block(media_block_stack.back());
+              }
+            }
+            else {
+              if (cs->head() != NULL) {
+                cs->head()->media_block(media_block_stack.back());
+              }
+            }
           }
         }
       }
