@@ -2251,6 +2251,10 @@ namespace Sass {
   ////////////////////////////////////////////////////////////////////////////
   typedef std::set<Sequence_Selector*, Sequence_Selector_Pointer_Compare> SourcesSet;
   class SimpleSequence_Selector : public Selector, public Vectorized<Simple_Selector*> {
+  public:
+    std::vector<Simple_Selector*>* members() {
+      return &elements();
+    }
   private:
     SourcesSet sources_;
     ADD_PROPERTY(bool, extended);
