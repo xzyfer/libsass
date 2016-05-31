@@ -2526,6 +2526,10 @@ namespace Sass {
   ///////////////////////////////////
   class CommaSequence_Selector : public Selector, public Vectorized<Sequence_Selector*> {
     ADD_PROPERTY(std::vector<std::string>, wspace)
+  public:
+    std::vector<Sequence_Selector*>* members() {
+      return &elements();
+    }
   protected:
     void adjust_after_pushing(Sequence_Selector* c);
   public:
