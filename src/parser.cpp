@@ -37,7 +37,7 @@ namespace Sass {
     Parser p(ctx, pstate);
     p.source   = source ? source : beg;
     p.position = beg ? beg : p.source;
-    p.end      = p.position + strlen(p.position);
+    p.end      = p.position + (p.position ? strlen(p.position) : 0);
     Block_Obj root = SASS_MEMORY_NEW(Block, pstate);
     p.block_stack.push_back(root);
     root->is_root(true);
@@ -51,7 +51,7 @@ namespace Sass {
     Parser p(ctx, pstate);
     p.source   = source ? source : beg;
     p.position = beg ? beg : p.source;
-    p.end      = end ? end : p.position + strlen(p.position);
+    p.end      = end ? end : p.position + (p.position ? strlen(p.position) : 0);
     Block_Obj root = SASS_MEMORY_NEW(Block, pstate);
     p.block_stack.push_back(root);
     root->is_root(true);
@@ -85,7 +85,7 @@ namespace Sass {
     Parser p(ctx, pstate);
     p.source   = source ? source : t.begin;
     p.position = t.begin ? t.begin : p.source;
-    p.end      = t.end ? t.end : p.position + strlen(p.position);
+    p.end      = t.end ? t.end : p.position + (p.position ? strlen(p.position) : 0);
     Block_Obj root = SASS_MEMORY_NEW(Block, pstate);
     p.block_stack.push_back(root);
     root->is_root(true);
@@ -714,8 +714,9 @@ namespace Sass {
       // comments are allowed, but not spaces?
       combinator = Complex_Selector::REFERENCE;
       if (!lex < re_reference_combinator >()) return 0;
-      reference = SASS_MEMORY_NEW(String_Constant, pstate, lexed);
+      std::string str = lexed;
       if (!lex < exactly < '/' > >()) return 0; // ToDo: error msg?
+      reference = SASS_MEMORY_NEW(String_Constant, pstate, str);
     }
 
     if (!lhs && combinator == Complex_Selector::ANCESTOR_OF) return 0;
@@ -911,8 +912,9 @@ namespace Sass {
           >()
       ) {
         lex_css< alternatives < static_value, binomial > >();
-        String_Constant_Ptr expr = SASS_MEMORY_NEW(String_Constant, pstate, lexed);
-        if (expr && lex_css< exactly<')'> >()) {
+        std::string str = lexed;
+        if (lex_css< exactly<')'> >()) {
+          String_Constant_Ptr expr = SASS_MEMORY_NEW(String_Constant, pstate, str);
           expr->can_compress_whitespace(true);
           return SASS_MEMORY_NEW(Pseudo_Selector, p, name, expr);
         }
@@ -1272,7 +1274,6 @@ namespace Sass {
       bool right_ws = peek < css_comments >() != NULL;
       operators.push_back({ op, left_ws, right_ws });
       operands.push_back(parse_expression());
-      left_ws = peek < css_comments >() != NULL;
     }
     // we are called recursively for list, so we first
     // fold inner binary expression which has delayed
@@ -2588,7 +2589,7 @@ namespace Sass {
         // did we have interpolations?
         if (*p == '#' && *(p+1) == '{') {
           rv.has_interpolants = true;
-          p = q; break;
+          break;
         }
         ++ p;
       }
