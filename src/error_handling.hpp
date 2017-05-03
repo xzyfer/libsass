@@ -137,10 +137,8 @@ namespace Sass {
     };
 
     class StackError : public Base {
-      protected:
-        const AST_Node& node;
       public:
-        StackError(const AST_Node& node);
+        StackError(ParserState pstate);
         virtual const char* errtype() const { return "SystemStackError"; }
         virtual ~StackError() throw() {};
     };

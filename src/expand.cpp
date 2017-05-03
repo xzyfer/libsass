@@ -680,7 +680,7 @@ namespace Sass {
   Statement_Ptr Expand::operator()(Mixin_Call_Ptr c)
   {
     if (recursions > maxRecursion) {
-      throw Exception::StackError(*c);
+      throw Exception::StackError(c->pstate());
     }
 
     recursions ++;
