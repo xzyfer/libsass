@@ -36,12 +36,14 @@ namespace Sass {
     Position after_token;
     ParserState pstate;
     int indentation;
+    size_t selectorRecursion;
 
     Token lexed;
 
     Parser(Context& ctx, const ParserState& pstate)
     : ParserState(pstate), ctx(ctx), block_stack(), stack(0), last_media_block(),
-      source(0), position(0), end(0), before_token(pstate), after_token(pstate), pstate(pstate), indentation(0)
+      source(0), position(0), end(0), before_token(pstate), after_token(pstate), pstate(pstate),
+      indentation(0), selectorRecursion(0)
     { stack.push_back(Scope::Root); }
 
     // static Parser from_string(const std::string& src, Context& ctx, ParserState pstate = ParserState("[STRING]"));

@@ -30,6 +30,8 @@ namespace Sass {
   using namespace Constants;
   using namespace Prelexer;
 
+  const size_t maxRecursion = 500;
+
   Parser Parser::from_c_str(const char* beg, Context& ctx, ParserState pstate, const char* source)
   {
     pstate.offset.column = 0;
@@ -643,6 +645,11 @@ namespace Sass {
   // this is the main entry point for most
   Selector_List_Obj Parser::parse_selector_list(bool chroot)
   {
+    if (selectorRecursion > maxRecursion) {
+      throw Exception::StackError(pstate);
+    }
+    selectorRecursion++;
+
     bool reloop;
     bool had_linefeed = false;
     Complex_Selector_Obj sel;
@@ -664,7 +671,10 @@ namespace Sass {
       // now parse the complex selector
       sel = parse_complex_selector(chroot);
 
-      if (!sel) return group.detach();
+      if (!sel) {
+        selectorRecursion--;
+        return group.detach();
+      }
 
       sel->has_line_feed(had_linefeed);
 
@@ -688,6 +698,7 @@ namespace Sass {
     // update for end position
     group->update_pstate(pstate);
     if (sel) sel->last()->has_line_break(false);
+    selectorRecursion--;
     return group.detach();
   }
   // EO parse_selector_list
@@ -698,13 +709,20 @@ namespace Sass {
   // can come first in the whole selector sequence (like `> DIV').
   Complex_Selector_Obj Parser::parse_complex_selector(bool chroot)
   {
+    if (selectorRecursion > maxRecursion) {
+      throw Exception::StackError(pstate);
+    }
+    selectorRecursion++;
 
     String_Obj reference = 0;
     lex < block_comment >();
     advanceToNextToken();
     Complex_Selector_Obj sel = SASS_MEMORY_NEW(Complex_Selector, pstate);
 
-    if (peek < end_of_file >()) return 0;
+    if (peek < end_of_file >()) {
+      selectorRecursion--;
+      return 0;
+    }
 
     // parse the left hand side
     Compound_Selector_Obj lhs;
@@ -723,12 +741,21 @@ namespace Sass {
     else if (lex< sequence < exactly<'/'>, negate < exactly < '*' > > > >()) {
       // comments are allowed, but not spaces?
       combinator = Complex_Selector::REFERENCE;
-      if (!lex < re_reference_combinator >()) return 0;
+      if (!lex < re_reference_combinator >()) {
+        selectorRecursion--;
+        return 0;
+      }
       reference = SASS_MEMORY_NEW(String_Constant, pstate, lexed);
-      if (!lex < exactly < '/' > >()) return 0; // ToDo: error msg?
+      if (!lex < exactly < '/' > >()) {
+        selectorRecursion--;
+        return 0; // ToDo: error msg?
+      }
     }
 
-    if (!lhs && combinator == Complex_Selector::ANCESTOR_OF) return 0;
+    if (!lhs && combinator == Complex_Selector::ANCESTOR_OF) {
+      selectorRecursion--;
+      return 0;
+    }
 
     // lex < block_comment >();
     sel->head(lhs);
@@ -768,6 +795,7 @@ namespace Sass {
     }
 
     sel->update_pstate(pstate);
+    selectorRecursion--;
     // complex selector
     return sel;
   }
