@@ -52,7 +52,7 @@ namespace Sass {
   {
     return ctx.cwd();
   }
-  
+
   struct Sass_Inspect_Options& Eval::options()
   {
     return ctx.c_options;
@@ -1368,28 +1368,42 @@ namespace Sass {
   {
     String_Obj t = q->media_type();
     t = static_cast<String_Ptr>(t.isNull() ? 0 : t->perform(this));
+    String_Obj m = q->modifier();
+    m = static_cast<String_Ptr>(m.isNull() ? 0 : m->perform(this));
+    Expression_Ptr c = q->condition();
+    c = (c ? c->perform(this) : 0);
     Media_Query_Obj qq = SASS_MEMORY_NEW(Media_Query,
-                                      q->pstate(),
-                                      t,
-                                      q->length(),
-                                      q->is_negated(),
-                                      q->is_restricted());
-    for (size_t i = 0, L = q->length(); i < L; ++i) {
-      qq->append(static_cast<Media_Query_Expression_Ptr>((*q)[i]->perform(this)));
-    }
+                                          q->pstate(),
+                                          Cast<String>(t),
+                                          Cast<String>(m),
+                                          Cast<Media_Condition>(c));
     return qq.detach();
   }
 
-  Expression_Ptr Eval::operator()(Media_Query_Expression_Ptr e)
+  Media_Condition_Ptr Eval::operator()(Media_Condition_Ptr c)
   {
-    Expression_Obj feature = e->feature();
+    Expression_Obj left = c->left();
+    left = (left ? left->perform(this) : 0);
+    Expression_Obj right = c->right();
+    right = (right ? right->perform(this) : 0);
+    return SASS_MEMORY_NEW(Media_Condition,
+                            c->pstate(),
+                            c->is_negated(),
+                            left,
+                            right,
+                            c->operand());
+  }
+
+  Expression_Ptr Eval::operator()(Media_Feature_Ptr f)
+  {
+    Expression_Obj feature = f->feature();
     feature = (feature ? feature->perform(this) : 0);
     if (feature && Cast<String_Quoted>(feature)) {
       feature = SASS_MEMORY_NEW(String_Quoted,
                                   feature->pstate(),
                                   Cast<String_Quoted>(feature)->value());
     }
-    Expression_Obj value = e->value();
+    Expression_Obj value = f->value();
     value = (value ? value->perform(this) : 0);
     if (value && Cast<String_Quoted>(value)) {
       // XXX: this is never hit via spec tests
@@ -1397,11 +1411,11 @@ namespace Sass {
                                 value->pstate(),
                                 Cast<String_Quoted>(value)->value());
     }
-    return SASS_MEMORY_NEW(Media_Query_Expression,
-                           e->pstate(),
+    return SASS_MEMORY_NEW(Media_Feature,
+                           f->pstate(),
                            feature,
                            value,
-                           e->is_interpolated());
+                           f->is_interpolated());
   }
 
   Expression_Ptr Eval::operator()(Null_Ptr n)

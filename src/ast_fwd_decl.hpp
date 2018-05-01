@@ -189,9 +189,12 @@ namespace Sass {
   class Media_Query;
   typedef Media_Query* Media_Query_Ptr;
   typedef Media_Query const* Media_Query_Ptr_Const;
-  class Media_Query_Expression;
-  typedef Media_Query_Expression* Media_Query_Expression_Ptr;
-  typedef Media_Query_Expression const* Media_Query_Expression_Ptr_Const;
+  class Media_Condition;
+  typedef Media_Condition* Media_Condition_Ptr;
+  typedef Media_Condition const* Media_Condition_Ptr_Const;
+  class Media_Feature;
+  typedef Media_Feature* Media_Feature_Ptr;
+  typedef Media_Feature const* Media_Feature_Ptr_Const;
   class Supports_Condition;
   typedef Supports_Condition* Supports_Condition_Ptr;
   typedef Supports_Condition const* Supports_Condition_Ptr_Const;
@@ -331,7 +334,8 @@ namespace Sass {
   IMPL_MEM_OBJ(String_Constant);
   IMPL_MEM_OBJ(String_Quoted);
   IMPL_MEM_OBJ(Media_Query);
-  IMPL_MEM_OBJ(Media_Query_Expression);
+  IMPL_MEM_OBJ(Media_Condition);
+  IMPL_MEM_OBJ(Media_Feature);
   IMPL_MEM_OBJ(Supports_Condition);
   IMPL_MEM_OBJ(Supports_Operator);
   IMPL_MEM_OBJ(Supports_Negation);

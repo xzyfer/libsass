@@ -61,8 +61,8 @@ namespace Sass {
     Block_Ptr flatten(Block_Ptr);
     bool bubblable(Statement_Ptr);
 
-    List_Ptr merge_media_queries(Media_Block_Ptr, Media_Block_Ptr);
-    Media_Query_Ptr merge_media_query(Media_Query_Ptr, Media_Query_Ptr);
+    // List_Ptr merge_media_queries(Media_Block_Ptr, Media_Block_Ptr);
+    // Media_Query_Ptr merge_media_query(Media_Query_Ptr, Media_Query_Ptr);
 
     // generic fallback
     template <typename U>

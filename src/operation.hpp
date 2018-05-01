@@ -78,10 +78,11 @@ namespace Sass {
     virtual T operator()(Supports_Declaration_Ptr x)   = 0;
     virtual T operator()(Supports_Interpolation_Ptr x) = 0;
     virtual T operator()(Media_Query_Ptr x)            = 0;
-    virtual T operator()(Media_Query_Expression_Ptr x) = 0;
+    virtual T operator()(Media_Condition_Ptr x)        = 0;
+    virtual T operator()(Media_Feature_Ptr x)          = 0;
     virtual T operator()(At_Root_Query_Ptr x)          = 0;
     virtual T operator()(Parent_Selector_Ptr x)        = 0;
-    virtual T operator()(Parent_Reference_Ptr x)        = 0;
+    virtual T operator()(Parent_Reference_Ptr x)       = 0;
     // parameters and arguments
     virtual T operator()(Parameter_Ptr x)              = 0;
     virtual T operator()(Parameters_Ptr x)             = 0;
@@ -96,9 +97,9 @@ namespace Sass {
     virtual T operator()(Attribute_Selector_Ptr x)     = 0;
     virtual T operator()(Pseudo_Selector_Ptr x)        = 0;
     virtual T operator()(Wrapped_Selector_Ptr x)       = 0;
-    virtual T operator()(Compound_Selector_Ptr x)= 0;
-    virtual T operator()(Complex_Selector_Ptr x)      = 0;
-    virtual T operator()(Selector_List_Ptr x) = 0;
+    virtual T operator()(Compound_Selector_Ptr x)      = 0;
+    virtual T operator()(Complex_Selector_Ptr x)       = 0;
+    virtual T operator()(Selector_List_Ptr x)          = 0;
   };
 
   // example: Operation_CRTP<Expression_Ptr, Eval>
@@ -159,10 +160,11 @@ namespace Sass {
     T operator()(Supports_Declaration_Ptr x)   { return static_cast<D*>(this)->fallback(x); }
     T operator()(Supports_Interpolation_Ptr x) { return static_cast<D*>(this)->fallback(x); }
     T operator()(Media_Query_Ptr x)            { return static_cast<D*>(this)->fallback(x); }
-    T operator()(Media_Query_Expression_Ptr x) { return static_cast<D*>(this)->fallback(x); }
+    T operator()(Media_Condition_Ptr x)        { return static_cast<D*>(this)->fallback(x); }
+    T operator()(Media_Feature_Ptr x)          { return static_cast<D*>(this)->fallback(x); }
     T operator()(At_Root_Query_Ptr x)          { return static_cast<D*>(this)->fallback(x); }
     T operator()(Parent_Selector_Ptr x)        { return static_cast<D*>(this)->fallback(x); }
-    T operator()(Parent_Reference_Ptr x)        { return static_cast<D*>(this)->fallback(x); }
+    T operator()(Parent_Reference_Ptr x)       { return static_cast<D*>(this)->fallback(x); }
     // parameters and arguments
     T operator()(Parameter_Ptr x)              { return static_cast<D*>(this)->fallback(x); }
     T operator()(Parameters_Ptr x)             { return static_cast<D*>(this)->fallback(x); }
@@ -177,14 +179,14 @@ namespace Sass {
     T operator()(Attribute_Selector_Ptr x)     { return static_cast<D*>(this)->fallback(x); }
     T operator()(Pseudo_Selector_Ptr x)        { return static_cast<D*>(this)->fallback(x); }
     T operator()(Wrapped_Selector_Ptr x)       { return static_cast<D*>(this)->fallback(x); }
-    T operator()(Compound_Selector_Ptr x){ return static_cast<D*>(this)->fallback(x); }
-    T operator()(Complex_Selector_Ptr x)      { return static_cast<D*>(this)->fallback(x); }
-    T operator()(Selector_List_Ptr x) { return static_cast<D*>(this)->fallback(x); }
+    T operator()(Compound_Selector_Ptr x)      { return static_cast<D*>(this)->fallback(x); }
+    T operator()(Complex_Selector_Ptr x)       { return static_cast<D*>(this)->fallback(x); }
+    T operator()(Selector_List_Ptr x)          { return static_cast<D*>(this)->fallback(x); }
 
     // fallback with specific type U
     // will be called if not overloaded
     template <typename U> T fallback(U x)
-    { 
+    {
       std::string msg(typeid(*this).name());
       msg += ": CRTP not implemented for ";
       throw std::runtime_error(msg + typeid(*x).name());

@@ -466,14 +466,14 @@ namespace Sass {
         }
         else
         {
-          List_Obj mq = merge_media_queries(
-            Cast<Media_Block>(node->node()),
-            Cast<Media_Block>(parent)
-          );
-          if (!mq->length()) continue;
-          if (Media_Block* b = Cast<Media_Block>(node->node())) {
-            b->media_queries(mq);
-          }
+        //   List_Obj mq = merge_media_queries(
+        //     Cast<Media_Block>(node->node()),
+        //     Cast<Media_Block>(parent)
+        //   );
+        //   if (!mq->length()) continue;
+        //   if (Media_Block* b = Cast<Media_Block>(node->node())) {
+        //     b->media_queries(mq);
+        //   }
           ss = node->node();
         }
 
@@ -523,7 +523,7 @@ namespace Sass {
       }
     }
   }
-
+/*
   List_Ptr Cssize::merge_media_queries(Media_Block_Ptr m1, Media_Block_Ptr m2)
   {
     List_Ptr qq = SASS_MEMORY_NEW(List,
@@ -598,4 +598,5 @@ namespace Sass {
 
     return mm;
   }
+*/
 }

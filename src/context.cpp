@@ -37,6 +37,7 @@
 #include "fn_numbers.hpp"
 #include "fn_strings.hpp"
 #include "fn_selectors.hpp"
+#include "debugger.hpp"
 
 namespace Sass {
   using namespace Constants;
@@ -674,12 +675,16 @@ namespace Sass {
       auto styles = sheet.second;
       check_nesting(styles.root);
     }
+    debug_ast(root);
     // expand and eval the tree
     root = expand(root);
+    debug_ast(root);
     // check nesting
     check_nesting(root);
+    debug_ast(root);
     // merge and bubble certain rules
     root = cssize(root);
+    debug_ast(root);
     // should we extend something?
     if (!subset_map.empty()) {
       // create crtp visitor object

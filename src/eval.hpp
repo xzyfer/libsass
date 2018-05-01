@@ -65,7 +65,8 @@ namespace Sass {
     Expression_Ptr operator()(String_Constant_Ptr);
     // Expression_Ptr operator()(Selector_List_Ptr);
     Media_Query_Ptr operator()(Media_Query_Ptr);
-    Expression_Ptr operator()(Media_Query_Expression_Ptr);
+    Media_Condition_Ptr operator()(Media_Condition_Ptr);
+    Expression_Ptr operator()(Media_Feature_Ptr);
     Expression_Ptr operator()(At_Root_Query_Ptr);
     Expression_Ptr operator()(Supports_Operator_Ptr);
     Expression_Ptr operator()(Supports_Negation_Ptr);

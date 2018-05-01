@@ -1823,50 +1823,78 @@ namespace Sass {
     ATTACH_CRTP_PERFORM_METHODS()
   };
 
-  /////////////////
-  // Media queries.
-  /////////////////
-  class Media_Query : public Expression,
-                      public Vectorized<Media_Query_Expression_Obj> {
-    ADD_PROPERTY(String_Obj, media_type)
-    ADD_PROPERTY(bool, is_negated)
-    ADD_PROPERTY(bool, is_restricted)
+  class Media_Query : public Expression {
+    ADD_PROPERTY(String_Obj, media_type);
+    ADD_PROPERTY(String_Obj, modifier);
+    ADD_PROPERTY(Media_Condition_Obj, condition);
   public:
-    Media_Query(ParserState pstate,
-                String_Obj t = 0, size_t s = 0, bool n = false, bool r = false)
-    : Expression(pstate), Vectorized<Media_Query_Expression_Obj>(s),
-      media_type_(t), is_negated_(n), is_restricted_(r)
+    Media_Query(ParserState pstate, String_Obj t, String_Obj m, Media_Condition_Obj c)
+    : Expression(pstate), media_type_(t), modifier_(m), condition_(c)
+    { }
+    Media_Query(ParserState pstate, Media_Condition_Obj c)
+    : Expression(pstate), media_type_(0), modifier_(0), condition_(c)
+    { }
+    Media_Query(ParserState pstate)
+    : Expression(pstate), media_type_(0), modifier_(0), condition_(0)
     { }
     Media_Query(const Media_Query* ptr)
     : Expression(ptr),
-      Vectorized<Media_Query_Expression_Obj>(*ptr),
       media_type_(ptr->media_type_),
-      is_negated_(ptr->is_negated_),
-      is_restricted_(ptr->is_restricted_)
-    { }
+      modifier_(ptr->modifier_),
+      condition_(ptr->condition_)
+    {}
     ATTACH_AST_OPERATIONS(Media_Query)
+    ATTACH_CRTP_PERFORM_METHODS()
+  };
+
+  class Media_Condition : public Expression {
+  public:
+    enum Operand { AND, OR };
+  private:
+    ADD_PROPERTY(bool, is_negated);
+    ADD_PROPERTY(Media_Feature_Obj, left);
+    ADD_PROPERTY(Media_Condition_Obj, right);
+    ADD_PROPERTY(Operand, operand);
+  public:
+    Media_Condition(ParserState pstate, bool n, Media_Feature_Obj l, Media_Condition_Obj r, Operand o)
+    : Expression(pstate), is_negated_(n), left_(l), right_(r), operand_(o)
+    { }
+    Media_Condition(ParserState pstate, bool n, Media_Feature_Obj l)
+    : Expression(pstate), is_negated_(n), left_(l), right_(0), operand_(Operand::AND)
+    { }
+    Media_Condition(const Media_Condition* ptr)
+    : Expression(ptr),
+      is_negated_(ptr->is_negated_),
+      left_(ptr->left_),
+      right_(ptr->right_),
+      operand_(ptr->operand_)
+    { }
+    ATTACH_AST_OPERATIONS(Media_Condition)
     ATTACH_CRTP_PERFORM_METHODS()
   };
 
   ////////////////////////////////////////////////////
   // Media expressions (for use inside media queries).
   ////////////////////////////////////////////////////
-  class Media_Query_Expression : public Expression {
+  class Media_Feature : public Expression {
     ADD_PROPERTY(Expression_Obj, feature)
     ADD_PROPERTY(Expression_Obj, value)
     ADD_PROPERTY(bool, is_interpolated)
+    ADD_PROPERTY(Sass_OP, op)
   public:
-    Media_Query_Expression(ParserState pstate,
-                           Expression_Obj f, Expression_Obj v, bool i = false)
+    Media_Feature(ParserState pstate, Expression_Obj f, Expression_Obj v, bool i = false)
     : Expression(pstate), feature_(f), value_(v), is_interpolated_(i)
     { }
-    Media_Query_Expression(const Media_Query_Expression* ptr)
+    Media_Feature(ParserState pstate, Expression_Obj f, bool i = false)
+    : Expression(pstate), feature_(f), value_(0), is_interpolated_(i)
+    { }
+    Media_Feature(const Media_Feature* ptr)
     : Expression(ptr),
       feature_(ptr->feature_),
       value_(ptr->value_),
       is_interpolated_(ptr->is_interpolated_)
     { }
-    ATTACH_AST_OPERATIONS(Media_Query_Expression)
+    ATTACH_AST_OPERATIONS(Media_Feature)
     ATTACH_CRTP_PERFORM_METHODS()
   };
 

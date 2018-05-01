@@ -11,6 +11,7 @@
 #include "context.hpp"
 #include "listize.hpp"
 #include "color_maps.hpp"
+#include "debugger.hpp"
 #include "utf8/checked.h"
 
 namespace Sass {
@@ -789,32 +790,62 @@ namespace Sass {
 
   void Inspect::operator()(Media_Query_Ptr mq)
   {
-    size_t i = 0;
+    std::cerr << "Inspect::operator: " << "\n" << std::endl;
+    debug_ast(mq);
     if (mq->media_type()) {
-      if      (mq->is_negated())    append_string("not ");
-      else if (mq->is_restricted()) append_string("only ");
+      if (mq->modifier()) {
+        mq->modifier()->perform(this);
+        append_mandatory_space();
+      }
       mq->media_type()->perform(this);
     }
-    else {
-      (*mq)[i++]->perform(this);
+    if (mq->condition()) {
+      if (mq->media_type()) {
+        append_mandatory_space();
+        append_token("and", mq);
+        append_mandatory_space();
+      }
+      mq->condition()->perform(this);
     }
-    for (size_t L = mq->length(); i < L; ++i) {
-      append_string(" and ");
-      (*mq)[i]->perform(this);
-    }
+    // for (size_t L = mq->length(); i < L; ++i) {
+    //   append_string(" and ");
+    //   (*mq)[i]->perform(this);
+    // }
   }
 
-  void Inspect::operator()(Media_Query_Expression_Ptr mqe)
+  void Inspect::operator()(Media_Condition_Ptr mc)
   {
-    if (mqe->is_interpolated()) {
-      mqe->feature()->perform(this);
+    if (mc->is_negated()) append_string("not (");
+    mc->left()->perform(this);
+
+    if (mc->right()) {
+      if (mc->operand() == Media_Condition::AND) {
+        append_mandatory_space();
+        append_token("and", mc);
+        append_mandatory_space();
+      } else if (mc->operand() == Media_Condition::OR) {
+        append_mandatory_space();
+        append_token("or", mc);
+        append_mandatory_space();
+      }
+
+      mc->right()->perform(this);
+    }
+
+    if (mc->is_negated()) append_string(")");
+  }
+
+  void Inspect::operator()(Media_Feature_Ptr mf)
+  {
+    if (mf->is_interpolated()) {
+      mf->feature()->perform(this);
     }
     else {
       append_string("(");
-      mqe->feature()->perform(this);
-      if (mqe->value()) {
-        append_string(": "); // verified
-        mqe->value()->perform(this);
+      mf->feature()->perform(this);
+      if (mf->value()) {
+        append_string(": ");
+        mf->value()->perform(this);
       }
       append_string(")");
     }

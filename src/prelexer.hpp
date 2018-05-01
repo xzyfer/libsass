@@ -382,6 +382,7 @@ namespace Sass {
 
     const char* css_variable_value(const char* src);
     const char* css_variable_top_level_value(const char* src);
+    const char* any_value(const char* src);
 
     // Utility functions for finding and counting characters in a string.
     template<char c>

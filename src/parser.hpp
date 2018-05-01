@@ -55,7 +55,7 @@ namespace Sass {
     : ParserState(pstate), ctx(ctx), block_stack(), stack(0), last_media_block(),
       source(0), position(0), end(0), before_token(pstate), after_token(pstate),
       pstate(pstate), traces(traces), indentation(0), nestings(0)
-    { 
+    {
       stack.push_back(Scope::Root);
     }
 
@@ -305,9 +305,14 @@ namespace Sass {
     Content_Obj parse_content_directive();
     void parse_charset_directive();
     Media_Block_Obj parse_media_block();
-    List_Obj parse_media_queries();
+    List_Obj parse_media_query_list();
     Media_Query_Obj parse_media_query();
-    Media_Query_Expression_Obj parse_media_expression();
+    Media_Condition_Obj parse_media_condition();
+    Media_Condition_Obj parse_media_condition_without_or();
+    Media_Condition_Obj parse_media_in_parens();
+    Media_Feature_Obj parse_media_feature();
+    String_Obj parse_media_type();
+    // Media_Query_Expression_Obj parse_general_enclosed();
     Supports_Block_Obj parse_supports_directive();
     Supports_Condition_Obj parse_supports_condition();
     Supports_Condition_Obj parse_supports_negation();

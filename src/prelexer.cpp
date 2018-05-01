@@ -1623,6 +1623,23 @@ namespace Sass {
       >(src);
     }
 
+    extern const char any_value_negates[] = "()[]{}\"'#/;!";
+    const char* any_value(const char* src) {
+      return sequence<
+        alternatives<
+          sequence<
+            negate< exactly< url_fn_kwd > >,
+            one_plus< neg_class_char< any_value_negates > >
+          >,
+          sequence< exactly<'#'>, negate< exactly<'{'> > >,
+          sequence< exactly<'/'>, negate< exactly<'*'> > >,
+          static_string,
+          real_uri,
+          block_comment
+        >
+      >(src);
+    }
+
     const char* parenthese_scope(const char* src) {
       return sequence <
         exactly < '(' >,

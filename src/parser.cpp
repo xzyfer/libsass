@@ -8,6 +8,7 @@
 #include "color_maps.hpp"
 #include "sass/functions.h"
 #include "error_handling.hpp"
+#include "debugger.hpp"
 
 // Notes about delayed: some ast nodes can have delayed evaluation so
 // they can preserve their original semantics if needed. This is most
@@ -364,7 +365,7 @@ namespace Sass {
     } while (lex_css< exactly<','> >());
 
     if (!peek_css< alternatives< exactly<';'>, exactly<'}'>, end_of_file > >()) {
-      List_Obj import_queries = parse_media_queries();
+      List_Obj import_queries = parse_media_query_list();
       imp->import_queries(import_queries);
     }
 
@@ -2319,7 +2320,7 @@ namespace Sass {
     stack.push_back(Scope::Media);
     Media_Block_Obj media_block = SASS_MEMORY_NEW(Media_Block, pstate, 0, 0);
 
-    media_block->media_queries(parse_media_queries());
+    media_block->media_queries(parse_media_query_list());
 
     Media_Block_Obj prev_media_block = last_media_block;
     last_media_block = media_block;
@@ -2329,66 +2330,255 @@ namespace Sass {
     return media_block.detach();
   }
 
-  List_Obj Parser::parse_media_queries()
+  List_Obj Parser::parse_media_query_list()
   {
+    // std::cerr << "--- parse_media_query_list ---\n" << position << std::endl;
     advanceToNextToken();
     List_Obj queries = SASS_MEMORY_NEW(List, pstate, 0, SASS_COMMA);
-    if (!peek_css < exactly <'{'> >()) queries->append(parse_media_query());
-    while (lex_css < exactly <','> >()) queries->append(parse_media_query());
+    if (!peek_css< exactly <'{'> >()) queries->append(parse_media_query());
+    while (lex_css< exactly <','> >()) queries->append(parse_media_query());
+
     queries->update_pstate(pstate);
     return queries.detach();
   }
 
-  // Expression_Ptr Parser::parse_media_query()
   Media_Query_Obj Parser::parse_media_query()
   {
+    // std::cerr << "--- parse_media_query ---\n" << position << std::endl;
     advanceToNextToken();
-    Media_Query_Obj media_query = SASS_MEMORY_NEW(Media_Query, pstate);
-    if (lex < kwd_not >()) { media_query->is_negated(true); lex < css_comments >(false); }
-    else if (lex < kwd_only >()) { media_query->is_restricted(true); lex < css_comments >(false); }
-
-    if (lex < identifier_schema >())  media_query->media_type(parse_identifier_schema());
-    else if (lex < identifier >())    media_query->media_type(parse_interpolated_chunk(lexed));
-    else                             media_query->append(parse_media_expression());
-
-    while (lex_css < kwd_and >()) media_query->append(parse_media_expression());
-    if (lex < identifier_schema >()) {
-      String_Schema_Ptr schema = SASS_MEMORY_NEW(String_Schema, pstate);
-      schema->append(media_query->media_type());
-      schema->append(SASS_MEMORY_NEW(String_Constant, pstate, " "));
-      schema->append(parse_identifier_schema());
-      media_query->media_type(schema);
+    if (Media_Condition_Obj c = parse_media_condition()) {
+      Media_Query_Obj m = SASS_MEMORY_NEW(Media_Query, pstate, c);
+      return m;
     }
-    while (lex_css < kwd_and >()) media_query->append(parse_media_expression());
 
-    media_query->update_pstate(pstate);
+    Media_Query_Obj m = SASS_MEMORY_NEW(Media_Query, pstate);
+    if (lex< alternatives< kwd_not, kwd_only > >()) {
+      m->modifier(SASS_MEMORY_NEW(String_Constant, pstate, lexed));
+      lex< css_comments >(false);
+    }
 
-    return media_query;
+    if (String_Obj t = parse_media_type()) m->media_type(t);
+
+    if (lex < kwd_and >()) m->condition(parse_media_condition_without_or());
+
+    m->update_pstate(pstate);
+    // std::cerr << "--- (match)parse_media_query ---\n" << position << std::endl;
+    return m;
   }
 
-  Media_Query_Expression_Obj Parser::parse_media_expression()
+  Media_Condition_Obj Parser::parse_media_condition()
   {
-    if (lex < identifier_schema >()) {
-      String_Obj ss = parse_identifier_schema();
-      return SASS_MEMORY_NEW(Media_Query_Expression, pstate, ss, 0, true);
+    // std::cerr << "--- parse_media_condition ---\n" << position << std::endl;
+    const char* i = position;
+    if (lex < kwd_not >()) {
+      Media_Condition_Obj mc = parse_media_in_parens();
+      if (!mc) error("parse_media_condition");
+      mc->is_negated(true);
+      // std::cerr << "--- (match)parse_media_condition ---\n" << position << std::endl;
+      return mc;
     }
-    if (!lex_css< exactly<'('> >()) {
-      error("media query expression must begin with '('");
+
+    Media_Condition_Obj mc = parse_media_in_parens();
+    if (!mc) {
+      position = i;
+      // std::cerr << "--- (miss)parse_media_condition ---\n" << position << std::endl;
+      return NULL;
     }
-    Expression_Obj feature;
-    if (peek_css< exactly<')'> >()) {
-      error("media feature required in media query expression");
-    }
-    feature = parse_expression();
-    Expression_Obj expression = 0;
-    if (lex_css< exactly<':'> >()) {
-      expression = parse_list(DELAYED);
-    }
-    if (!lex_css< exactly<')'> >()) {
-      error("unclosed parenthesis in media query expression");
-    }
-    return SASS_MEMORY_NEW(Media_Query_Expression, feature->pstate(), feature, expression);
+
+    Media_Condition_Obj mcc;
+    while (peek< alternatives < kwd_and, kwd_or > >()) {
+      if (!mcc) mcc = mc;
+      const Media_Condition::Operand op = lex< kwd_or >() ? Media_Condition::OR : Media_Condition::AND;
+      Media_Condition_Obj mo = parse_media_in_parens();
+      mo->operand(op);
+      mcc->right(mo);
+      mcc = mo;
+    };
+
+    // std::cerr << "--- (match)parse_media_condition ---\n" << position << std::endl;
+    return mc;
   }
+
+  Media_Condition_Obj Parser::parse_media_condition_without_or()
+  {
+    // std::cerr << "--- parse_media_condition_without_or ---\n" << position << std::endl;
+    const char* i = position;
+    if (lex < kwd_not >()) {
+      Media_Condition_Obj mc = parse_media_in_parens();
+      if (!mc) error("parse_media_condition_without_or");
+      mc->is_negated(true);
+      return mc;
+    }
+
+    Media_Condition_Obj mc = parse_media_in_parens();
+    if (!mc) {
+      position = i;
+      // std::cerr << "--- (miss)parse_media_condition_without_or ---\n" << position << std::endl;
+      return NULL;
+    }
+
+    Media_Condition_Obj mcc;
+    while (lex< kwd_and >()) {
+      if (!mcc) mcc = mc;
+      Media_Condition_Obj mo = parse_media_in_parens();
+      mo->operand(Media_Condition::AND);
+      mcc->right(mo);
+      mcc = mo;
+    };
+
+    // std::cerr << "--- (match)parse_media_condition_without_or ---\n" << position << std::endl;
+    return mc;
+  }
+
+  String_Obj Parser::parse_media_type()
+  {
+    // std::cerr << "--- parse_media_type ---\n" << position << std::endl;
+    const char* i = position;
+    if (lex< identifier >()) {
+      String_Constant_Obj s = SASS_MEMORY_NEW(String_Constant, pstate, lexed);
+      // TODO: The <media-type> production does not include the keywords only, not, and, and or.
+      // std::cerr << "--- (match)parse_media_query ---\n" << position << std::endl;
+      return s;
+    }
+    position = i;
+    // std::cerr << "--- (miss)parse_media_query ---\n" << position << std::endl;
+    return NULL;
+  }
+
+  Media_Condition_Obj Parser::parse_media_in_parens()
+  {
+    // std::cerr << "--- parse_media_in_parens ---\n" << position << std::endl;
+    const char* i = position;
+    if (lex< exactly<'('> >()) {
+      Media_Condition_Obj m = parse_media_condition();
+      if (m) {
+        if (!lex< exactly<')'> >()) {
+          css_error("Invalid CSS", " after ", ": expected ), was ", false);
+        }
+        // std::cerr << "--- (match)parse_media_in_parens ---\n" << position << std::endl;
+        return m;
+      }
+      position = i;
+    }
+
+    Media_Feature_Obj left;
+    if (Media_Feature_Obj mf = parse_media_feature()) left = mf;
+    // if (Media_Feature_Obj mf = parse_general_enclosed()) left = mf;
+    if (!left) {
+      position = i;
+      // std::cerr << "--- (miss)parse_media_in_parens ---\n" << position << std::endl;
+      return NULL;
+    }
+    Media_Condition_Obj m = SASS_MEMORY_NEW(Media_Condition, pstate, false, left);
+    // std::cerr << "--- (match)parse_media_in_parens ---\n" << position << std::endl;
+    return m;
+  }
+
+  Media_Feature_Obj Parser::parse_media_feature()
+  {
+    // std::cerr << "--- parse_media_feature ---\n" << position << std::endl;
+    const char* i = position;
+    if (lex< exactly<'('> >()) {
+      if (lex< identifier >()) {
+        Media_Feature_Obj f = SASS_MEMORY_NEW(Media_Feature, pstate, SASS_MEMORY_NEW(String_Constant, pstate, lexed));
+
+        if (lex< exactly<':'> >()) {
+          if (lex< alternatives< dimension, number, identifier/*, ratio*/ > >()) {
+            f->value(SASS_MEMORY_NEW(String_Constant, pstate, lexed));
+          } else {
+            css_error("Invalid CSS", " after ", ": expected expression (e.g. 1px, bold), was ");
+          }
+        }
+
+        if (!lex< exactly<')'> >()) css_error("Invalid CSS", " after ", ": expected ), was ", false);
+        // std::cerr << "--- (match)parse_media_feature ---\n" << position << std::endl;
+        return f;
+      // }
+      // else if (peek< alternatives<
+      //   sequence< identifier, optional< sequence< alternatives< exactly<'<'>, exactly<'>'> >, exactly<'='> > >, alternatives< number, dimension, identifier/*, ratio*/ > >,
+      //   sequence< alternatives< number, dimension, identifier/*, ratio*/ >, optional< sequence< alternatives< exactly<'<'>, exactly<'>'> >, exactly<'='> > >, identifier >,
+      //   sequence< alternatives< number, dimension, identifier/*, ratio*/ >, exactly<'<'>, optional< exactly<'='> >, identifier, exactly<'<'>, optional< exactly<'='> >, alternatives< number, dimension, identifier/*, ratio*/ > >,
+      //   sequence< alternatives< number, dimension, identifier/*, ratio*/ >, exactly<'>'>, optional< exactly<'='> >, identifier, exactly<'>'>, optional< exactly<'='> >, alternatives< number, dimension, identifier/*, ratio*/ > >
+      // > >()) {
+      //   if (!lex< exactly<')'> >()) css_error("Invalid CSS", " after ", ": expected ), was ", false);
+      //   // std::cerr << "--- (match)parse_media_feature ---\n" << position << std::endl;
+      //   return m;
+      }
+    }
+    position = i;
+    // std::cerr << "--- (miss)parse_media_feature ---\n" << position << std::endl;
+    return NULL;
+  }
+
+  // Media_Query_Expression_Obj Parser::parse_general_enclosed()
+  // {
+  //   // std::cerr << "--- parse_general_enclosed ---\n" << position << std::endl;
+  //   const char* i = position;
+  //   if (lex< alternatives<
+  //     sequence< identifier, exactly<'('>, any_value >,
+  //     sequence< identifier, any_value >
+  //   > >()) {
+  //     String_Constant_Obj s = SASS_MEMORY_NEW(String_Constant, pstate, lexed);
+  //     Media_Query_Expression_Obj m = SASS_MEMORY_NEW(Media_Query_Expression, pstate, s, 0, true);
+  //     // std::cerr << "--- (match)parse_general_enclosed ---\n" << position << std::endl;
+  //     return m;
+  //   }
+  //   position = i;
+  //   // std::cerr << "--- (miss)parse_general_enclosed ---\n" << position << std::endl;
+  //   return NULL;
+  // }
+
+
+  // // Expression_Ptr Parser::parse_media_query()
+  // Media_Query_Obj Parser::parse_media_query()
+  // {
+  //   advanceToNextToken();
+  //   Media_Query_Obj media_query = SASS_MEMORY_NEW(Media_Query, pstate);
+  //   if (lex < kwd_not >())           media_query->is_negated(true); lex < css_comments >(false); }
+  //   else if (lex < kwd_only >())     media_query->is_restricted(true); lex < css_comments >(false); }
+
+  //   if (lex < identifier_schema >()) media_query->media_type(parse_identifier_schema());
+  //   else if (lex < identifier >())   media_query->media_type(parse_interpolated_chunk(lexed));
+  //   else                             media_query->append(parse_media_expression());
+
+  //   while (lex_css < kwd_and >()) media_query->append(parse_media_expression());
+  //   if (lex < identifier_schema >()) {
+  //     String_Schema_Ptr schema = SASS_MEMORY_NEW(String_Schema, pstate);
+  //     schema->append(media_query->media_type());
+  //     schema->append(SASS_MEMORY_NEW(String_Constant, pstate, " "));
+  //     schema->append(parse_identifier_schema());
+  //     media_query->media_type(schema);
+  //   }
+  //   while (lex_css < kwd_and >()) media_query->append(parse_media_expression());
+
+  //   media_query->update_pstate(pstate);
+
+  //   return media_query;
+  // }
+
+  // Media_Query_Expression_Obj Parser::parse_media_expression()
+  // {
+  //   if (lex < identifier_schema >()) {
+  //     String_Obj ss = parse_identifier_schema();
+  //     return SASS_MEMORY_NEW(Media_Query_Expression, pstate, ss, 0, true);
+  //   }
+  //   if (!lex_css< exactly<'('> >()) {
+  //     error("media query expression must begin with '('");
+  //   }
+  //   Expression_Obj feature;
+  //   if (peek_css< exactly<')'> >()) {
+  //     error("media feature required in media query expression");
+  //   }
+  //   feature = parse_expression();
+  //   Expression_Obj expression = 0;
+  //   if (lex_css< exactly<':'> >()) {
+  //     expression = parse_list(DELAYED);
+  //   }
+  //   if (!lex_css< exactly<')'> >()) {
+  //     error("unclosed parenthesis in media query expression");
+  //   }
+  //   return SASS_MEMORY_NEW(Media_Query_Expression, feature->pstate(), feature, expression);
+  // }
 
   // lexed after `kwd_supports_directive`
   // these are very similar to media blocks

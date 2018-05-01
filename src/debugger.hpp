@@ -284,24 +284,34 @@ inline void debug_ast(AST_Node_Ptr node, std::string ind, Env* env)
       << (selector->has_line_feed() ? " [line-feed]": " -")
     << std::endl;
 
-  } else if (Cast<Media_Query_Expression>(node)) {
-    Media_Query_Expression_Ptr block = Cast<Media_Query_Expression>(node);
-    std::cerr << ind << "Media_Query_Expression " << block;
+  } else if (Cast<Media_Feature>(node)) {
+    Media_Feature_Ptr block = Cast<Media_Feature>(node);
+    std::cerr << ind << "Media_Feature " << block;
     std::cerr << " (" << pstate_source_position(node) << ")";
     std::cerr << (block->is_interpolated() ? " [is_interpolated]": " -")
     << std::endl;
     debug_ast(block->feature(), ind + " feature) ");
     debug_ast(block->value(), ind + " value) ");
 
+  } else if (Cast<Media_Condition>(node)) {
+    Media_Condition_Ptr block = Cast<Media_Condition>(node);
+    std::cerr << ind << "Media_Condition " << block;
+    std::cerr << " (" << pstate_source_position(node) << ")";
+    std::cerr << (block->is_negated() ? " [is_negated]": " -");
+    std::cerr << (block->operand() == Media_Condition::AND ? " [AND]" : " -");
+    std::cerr << (block->operand() == Media_Condition::OR ? " [OR]" : " -");
+    std::cerr << std::endl;
+    debug_ast(block->left(), ind + " left) ", env);
+    debug_ast(block->right(), ind + " right) ", env);
+
   } else if (Cast<Media_Query>(node)) {
     Media_Query_Ptr block = Cast<Media_Query>(node);
     std::cerr << ind << "Media_Query " << block;
-    std::cerr << " (" << pstate_source_position(node) << ")";
-    std::cerr << (block->is_negated() ? " [is_negated]": " -")
-      << (block->is_restricted() ? " [is_restricted]": " -")
+    std::cerr << " (" << pstate_source_position(node) << ")"
     << std::endl;
-    debug_ast(block->media_type(), ind + " ");
-    for(const auto& i : block->elements()) { debug_ast(i, ind + " ", env); }
+    debug_ast(block->modifier(), ind + " modifier) ");
+    debug_ast(block->media_type(), ind + " media_type) ");
+    debug_ast(block->condition(), ind + " condition) ");
 
   } else if (Cast<Media_Block>(node)) {
     Media_Block_Ptr block = Cast<Media_Block>(node);

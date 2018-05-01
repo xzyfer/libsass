@@ -10,6 +10,7 @@
 #include "context.hpp"
 #include "parser.hpp"
 #include "sass_functions.hpp"
+#include "debugger.hpp"
 
 namespace Sass {
 
@@ -177,11 +178,13 @@ namespace Sass {
     // So this is a cheap solution with a minimal price
     ctx.ast_gc.push_back(cpy); cpy->block(0);
     Expression_Obj mq = eval(m->media_queries());
+    debug_ast(mq);
     std::string str_mq(mq->to_string(ctx.c_options));
+    std::cerr << "Expand::operator: " << str_mq << "\n" << std::endl;
     char* str = sass_copy_c_string(str_mq.c_str());
     ctx.strings.push_back(str);
     Parser p(Parser::from_c_str(str, ctx, traces, mq->pstate()));
-    mq = p.parse_media_queries(); // re-assign now
+    mq = p.parse_media_query_list(); // re-assign now
     cpy->media_queries(mq);
     media_stack.push_back(cpy);
     Block_Obj blk = operator()(m->block());

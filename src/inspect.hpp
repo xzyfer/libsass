@@ -67,7 +67,8 @@ namespace Sass {
     virtual void operator()(Supports_Declaration_Ptr);
     virtual void operator()(Supports_Interpolation_Ptr);
     virtual void operator()(Media_Query_Ptr);
-    virtual void operator()(Media_Query_Expression_Ptr);
+    virtual void operator()(Media_Condition_Ptr);
+    virtual void operator()(Media_Feature_Ptr);
     virtual void operator()(At_Root_Query_Ptr);
     virtual void operator()(Null_Ptr);
     virtual void operator()(Parent_Selector_Ptr p);
