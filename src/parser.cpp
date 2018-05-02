@@ -2332,7 +2332,7 @@ namespace Sass {
 
   List_Obj Parser::parse_media_query_list()
   {
-    // std::cerr << "--- parse_media_query_list ---\n" << position << std::endl;
+    std::cerr << "--- parse_media_query_list ---\n" << position << std::endl;
     advanceToNextToken();
     List_Obj queries = SASS_MEMORY_NEW(List, pstate, 0, SASS_COMMA);
     if (!peek_css< exactly <'{'> >()) queries->append(parse_media_query());
@@ -2344,7 +2344,7 @@ namespace Sass {
 
   Media_Query_Obj Parser::parse_media_query()
   {
-    // std::cerr << "--- parse_media_query ---\n" << position << std::endl;
+    std::cerr << "--- parse_media_query ---\n" << position << std::endl;
     advanceToNextToken();
     if (Media_Condition_Obj c = parse_media_condition()) {
       Media_Query_Obj m = SASS_MEMORY_NEW(Media_Query, pstate, c);
@@ -2362,46 +2362,48 @@ namespace Sass {
     if (lex < kwd_and >()) m->condition(parse_media_condition_without_or());
 
     m->update_pstate(pstate);
-    // std::cerr << "--- (match)parse_media_query ---\n" << position << std::endl;
+    std::cerr << "--- (match)parse_media_query ---\n" << position << std::endl;
     return m;
   }
 
   Media_Condition_Obj Parser::parse_media_condition()
   {
-    // std::cerr << "--- parse_media_condition ---\n" << position << std::endl;
+    std::cerr << "--- parse_media_condition ---\n" << position << std::endl;
     const char* i = position;
     if (lex < kwd_not >()) {
       Media_Condition_Obj mc = parse_media_in_parens();
       if (!mc) error("parse_media_condition");
       mc->is_negated(true);
-      // std::cerr << "--- (match)parse_media_condition ---\n" << position << std::endl;
+      std::cerr << "--- (match)parse_media_condition ---\n" << position << std::endl;
       return mc;
     }
 
     Media_Condition_Obj mc = parse_media_in_parens();
     if (!mc) {
       position = i;
-      // std::cerr << "--- (miss)parse_media_condition ---\n" << position << std::endl;
+      std::cerr << "--- (miss)parse_media_condition ---\n" << position << std::endl;
       return NULL;
     }
 
     Media_Condition_Obj mcc;
     while (peek< alternatives < kwd_and, kwd_or > >()) {
       if (!mcc) mcc = mc;
-      const Media_Condition::Operand op = lex< kwd_or >() ? Media_Condition::OR : Media_Condition::AND;
+      Media_Condition::Operand op;
+      if (lex< kwd_or >()) op = Media_Condition::OR;
+      if (lex< kwd_and >()) op = Media_Condition::AND;
       Media_Condition_Obj mo = parse_media_in_parens();
       mo->operand(op);
       mcc->right(mo);
       mcc = mo;
     };
 
-    // std::cerr << "--- (match)parse_media_condition ---\n" << position << std::endl;
+    std::cerr << "--- (match)parse_media_condition ---\n" << position << std::endl;
     return mc;
   }
 
   Media_Condition_Obj Parser::parse_media_condition_without_or()
   {
-    // std::cerr << "--- parse_media_condition_without_or ---\n" << position << std::endl;
+    std::cerr << "--- parse_media_condition_without_or ---\n" << position << std::endl;
     const char* i = position;
     if (lex < kwd_not >()) {
       Media_Condition_Obj mc = parse_media_in_parens();
@@ -2413,7 +2415,7 @@ namespace Sass {
     Media_Condition_Obj mc = parse_media_in_parens();
     if (!mc) {
       position = i;
-      // std::cerr << "--- (miss)parse_media_condition_without_or ---\n" << position << std::endl;
+      std::cerr << "--- (miss)parse_media_condition_without_or ---\n" << position << std::endl;
       return NULL;
     }
 
@@ -2426,28 +2428,28 @@ namespace Sass {
       mcc = mo;
     };
 
-    // std::cerr << "--- (match)parse_media_condition_without_or ---\n" << position << std::endl;
+    std::cerr << "--- (match)parse_media_condition_without_or ---\n" << position << std::endl;
     return mc;
   }
 
   String_Obj Parser::parse_media_type()
   {
-    // std::cerr << "--- parse_media_type ---\n" << position << std::endl;
+    std::cerr << "--- parse_media_type ---\n" << position << std::endl;
     const char* i = position;
     if (lex< identifier >()) {
       String_Constant_Obj s = SASS_MEMORY_NEW(String_Constant, pstate, lexed);
       // TODO: The <media-type> production does not include the keywords only, not, and, and or.
-      // std::cerr << "--- (match)parse_media_query ---\n" << position << std::endl;
+      std::cerr << "--- (match)parse_media_query ---\n" << position << std::endl;
       return s;
     }
     position = i;
-    // std::cerr << "--- (miss)parse_media_query ---\n" << position << std::endl;
+    std::cerr << "--- (miss)parse_media_query ---\n" << position << std::endl;
     return NULL;
   }
 
   Media_Condition_Obj Parser::parse_media_in_parens()
   {
-    // std::cerr << "--- parse_media_in_parens ---\n" << position << std::endl;
+    std::cerr << "--- parse_media_in_parens ---\n" << position << std::endl;
     const char* i = position;
     if (lex< exactly<'('> >()) {
       Media_Condition_Obj m = parse_media_condition();
@@ -2455,7 +2457,7 @@ namespace Sass {
         if (!lex< exactly<')'> >()) {
           css_error("Invalid CSS", " after ", ": expected ), was ", false);
         }
-        // std::cerr << "--- (match)parse_media_in_parens ---\n" << position << std::endl;
+        std::cerr << "--- (match)parse_media_in_parens ---\n" << position << std::endl;
         return m;
       }
       position = i;
@@ -2466,24 +2468,30 @@ namespace Sass {
     // if (Media_Feature_Obj mf = parse_general_enclosed()) left = mf;
     if (!left) {
       position = i;
-      // std::cerr << "--- (miss)parse_media_in_parens ---\n" << position << std::endl;
+      std::cerr << "--- (miss)parse_media_in_parens ---\n" << position << std::endl;
       return NULL;
     }
     Media_Condition_Obj m = SASS_MEMORY_NEW(Media_Condition, pstate, false, left);
-    // std::cerr << "--- (match)parse_media_in_parens ---\n" << position << std::endl;
+    std::cerr << "--- (match)parse_media_in_parens ---\n" << position << std::endl;
     return m;
   }
 
   Media_Feature_Obj Parser::parse_media_feature()
   {
-    // std::cerr << "--- parse_media_feature ---\n" << position << std::endl;
+    std::cerr << "--- parse_media_feature ---\n" << position << std::endl;
     const char* i = position;
     if (lex< exactly<'('> >()) {
-      if (lex< identifier >()) {
+      if (lex< media_range_value >()) {
+        Media_Feature_Obj f = SASS_MEMORY_NEW(Media_Feature, pstate, SASS_MEMORY_NEW(String_Constant, pstate, lexed));
+        if (!lex< exactly<')'> >()) css_error("Invalid CSS", " after ", ": expected ), was ", false);
+        std::cerr << "--- (match)parse_media_feature ---\n" << position << std::endl;
+        return f;
+      }
+      else if (lex< media_feature_name >()) {
         Media_Feature_Obj f = SASS_MEMORY_NEW(Media_Feature, pstate, SASS_MEMORY_NEW(String_Constant, pstate, lexed));
 
         if (lex< exactly<':'> >()) {
-          if (lex< alternatives< dimension, number, identifier/*, ratio*/ > >()) {
+          if (lex< media_feature_value >()) {
             f->value(SASS_MEMORY_NEW(String_Constant, pstate, lexed));
           } else {
             css_error("Invalid CSS", " after ", ": expected expression (e.g. 1px, bold), was ");
@@ -2491,22 +2499,12 @@ namespace Sass {
         }
 
         if (!lex< exactly<')'> >()) css_error("Invalid CSS", " after ", ": expected ), was ", false);
-        // std::cerr << "--- (match)parse_media_feature ---\n" << position << std::endl;
+        std::cerr << "--- (match)parse_media_feature ---\n" << position << std::endl;
         return f;
-      // }
-      // else if (peek< alternatives<
-      //   sequence< identifier, optional< sequence< alternatives< exactly<'<'>, exactly<'>'> >, exactly<'='> > >, alternatives< number, dimension, identifier/*, ratio*/ > >,
-      //   sequence< alternatives< number, dimension, identifier/*, ratio*/ >, optional< sequence< alternatives< exactly<'<'>, exactly<'>'> >, exactly<'='> > >, identifier >,
-      //   sequence< alternatives< number, dimension, identifier/*, ratio*/ >, exactly<'<'>, optional< exactly<'='> >, identifier, exactly<'<'>, optional< exactly<'='> >, alternatives< number, dimension, identifier/*, ratio*/ > >,
-      //   sequence< alternatives< number, dimension, identifier/*, ratio*/ >, exactly<'>'>, optional< exactly<'='> >, identifier, exactly<'>'>, optional< exactly<'='> >, alternatives< number, dimension, identifier/*, ratio*/ > >
-      // > >()) {
-      //   if (!lex< exactly<')'> >()) css_error("Invalid CSS", " after ", ": expected ), was ", false);
-      //   // std::cerr << "--- (match)parse_media_feature ---\n" << position << std::endl;
-      //   return m;
       }
     }
     position = i;
-    // std::cerr << "--- (miss)parse_media_feature ---\n" << position << std::endl;
+    std::cerr << "--- (miss)parse_media_feature ---\n" << position << std::endl;
     return NULL;
   }
 
@@ -2520,7 +2518,7 @@ namespace Sass {
   //   > >()) {
   //     String_Constant_Obj s = SASS_MEMORY_NEW(String_Constant, pstate, lexed);
   //     Media_Query_Expression_Obj m = SASS_MEMORY_NEW(Media_Query_Expression, pstate, s, 0, true);
-  //     // std::cerr << "--- (match)parse_general_enclosed ---\n" << position << std::endl;
+      // std::cerr << "--- (match)parse_general_enclosed ---\n" << position << std::endl;
   //     return m;
   //   }
   //   position = i;

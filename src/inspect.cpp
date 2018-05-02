@@ -819,11 +819,11 @@ namespace Sass {
     mc->left()->perform(this);
 
     if (mc->right()) {
-      if (mc->operand() == Media_Condition::AND) {
+      if (mc->right()->operand() == Media_Condition::AND) {
         append_mandatory_space();
         append_token("and", mc);
         append_mandatory_space();
-      } else if (mc->operand() == Media_Condition::OR) {
+      } else if (mc->right()->operand() == Media_Condition::OR) {
         append_mandatory_space();
         append_token("or", mc);
         append_mandatory_space();

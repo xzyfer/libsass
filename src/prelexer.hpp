@@ -305,6 +305,7 @@ namespace Sass {
     const char* binomial(const char* src);
     const char* percentage(const char* src);
     const char* ampersand(const char* src);
+    const char* ratio(const char* src);
     const char* dimension(const char* src);
     const char* hex(const char* src);
     const char* hexa(const char* src);
@@ -373,6 +374,9 @@ namespace Sass {
     // Path matching functions.
     // const char* folder(const char* src);
     // const char* folders(const char* src);
+    const char* media_feature_name(const char* src);
+    const char* media_feature_value(const char* src);
+    const char* media_range_value(const char* src);
 
 
     const char* static_string(const char* src);

@@ -1036,6 +1036,15 @@ namespace Sass {
     const char* em(const char* src) {
       return sequence< number, exactly<em_kwd> >(src);
     } */
+    const char* ratio(const char* src) {
+      return sequence<
+        zero_plus<digits>,
+        optional_spaces,
+        exactly<'/'>,
+        optional_spaces,
+        zero_plus<digits>
+      >(src);
+    }
     const char* dimension(const char* src) {
       return sequence<number, unit_identifier >(src);
     }
@@ -1783,6 +1792,55 @@ namespace Sass {
               >
             >
           >
+        >
+      >(src);
+    }
+
+    const char* media_feature_name(const char* src) {
+      return identifier(src);
+    }
+
+    const char* media_feature_value(const char* src) {
+      return alternatives< ratio, dimension, number, identifier >(src);
+    }
+
+    const char* media_range_value(const char* src) {
+      return alternatives<
+        sequence<
+          media_feature_value,
+          optional_spaces,
+          exactly<'<'>, optional< exactly<'='> >,
+          optional_spaces,
+          media_feature_name,
+          optional_spaces,
+          exactly<'<'>, optional< exactly<'='> >,
+          optional_spaces,
+          media_feature_value
+        >,
+        sequence<
+          media_feature_value,
+          optional_spaces,
+          exactly<'>'>, optional< exactly<'='> >,
+          optional_spaces,
+          media_feature_name,
+          optional_spaces,
+          exactly<'>'>, optional< exactly<'='> >,
+          optional_spaces,
+          media_feature_value
+        >,
+        sequence<
+          media_feature_name,
+          optional_spaces,
+          sequence< alternatives< exactly<'<'>, exactly<'>'> >, optional< exactly<'='> > >,
+          optional_spaces,
+          media_feature_value
+        >,
+        sequence<
+          media_feature_value,
+          optional_spaces,
+          sequence< alternatives< exactly<'<'>, exactly<'>'> >, optional< exactly<'='> > >,
+          optional_spaces,
+          media_feature_name
         >
       >(src);
     }
