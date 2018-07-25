@@ -5,6 +5,7 @@
 
 #include "cssize.hpp"
 #include "context.hpp"
+#include "debugger.hpp"
 
 namespace Sass {
 
@@ -470,9 +471,9 @@ namespace Sass {
             Cast<Media_Block>(node->node()),
             Cast<Media_Block>(parent)
           );
-          if (!mq->length()) continue;
+          if (mq != 0 && !mq->length()) continue;
           if (Media_Block* b = Cast<Media_Block>(node->node())) {
-            b->media_queries(mq);
+            b->media_queries(mq ? mq : b->media_queries());
           }
           ss = node->node();
         }
@@ -537,8 +538,19 @@ namespace Sass {
         Expression_Obj l2 = m2->media_queries()->at(j);
         Media_Query_Ptr mq1 = Cast<Media_Query>(l1);
         Media_Query_Ptr mq2 = Cast<Media_Query>(l2);
-        Media_Query_Ptr mq = merge_media_query(mq1, mq2);
-        if (mq) qq->append(mq);
+        debug_ast(mq2);
+        debug_ast(mq1);
+        MediaQueryMergeResult* mmr = merge_media_query(mq2, mq1);
+        std::cerr << "empty? " << (mmr->empty() ? "true" : "false") << std::endl;
+        std::cerr << "unrepresentable? " << (mmr->unrepresentable() ? "true" : "false") << std::endl;
+        if (mmr->empty()) continue;
+        if (mmr->unrepresentable()) return 0;
+        std::cerr << "success? " << std::endl;
+        debug_ast(static_cast<MediaQuerySuccessfulMergeResult*>(mmr)->query());
+        // debug_ast(mq);
+        if (static_cast<MediaQuerySuccessfulMergeResult*>(mmr)) {
+          qq->append(static_cast<MediaQuerySuccessfulMergeResult*>(mmr)->query());
+        }
       }
     }
 
@@ -546,46 +558,106 @@ namespace Sass {
   }
 
 
-  Media_Query_Ptr Cssize::merge_media_query(Media_Query_Ptr mq1, Media_Query_Ptr mq2)
+  MediaQueryMergeResult* Cssize::merge_media_query(Media_Query_Ptr mq1, Media_Query_Ptr mq2)
   {
 
     std::string type;
     std::string mod;
+    Media_Query_Ptr features = SASS_MEMORY_NEW(Media_Query, mq1->pstate(), 0, 0);
 
     std::string m1 = std::string(mq1->is_restricted() ? "only" : mq1->is_negated() ? "not" : "");
     std::string t1 = mq1->media_type() ? mq1->media_type()->to_string(ctx.c_options) : "";
     std::string m2 = std::string(mq2->is_restricted() ? "only" : mq2->is_negated() ? "not" : "");
     std::string t2 = mq2->media_type() ? mq2->media_type()->to_string(ctx.c_options) : "";
 
+std::cerr << "m1: " << m1 << std::endl;
+std::cerr << "t1: " << t1 << std::endl;
+std::cerr << "m2: " << m2 << std::endl;
+std::cerr << "t2: " << t2 << std::endl;
 
-    if (t1.empty()) t1 = t2;
-    if (t2.empty()) t2 = t1;
+    if (t1.empty() && t2.empty()) {
+      Media_Query_Ptr mm = SASS_MEMORY_NEW(Media_Query,
+                                          mq1->pstate(),
+                                          0,
+                                          mq1->length() + mq2->length(),
+                                          mod == "not",
+                                          mod == "only");
+
+      if (!type.empty()) {
+        mm->media_type(SASS_MEMORY_NEW(String_Quoted, mq1->pstate(), type));
+      }
+
+      mm->concat(mq1);
+      mm->concat(mq2);
+
+      return new MediaQuerySuccessfulMergeResult(mm);
+    }
+
+
+    // if (t1.empty()) t1 = t2;
+    // if (t2.empty()) t2 = t1;
 
     if ((m1 == "not") ^ (m2 == "not")) {
       if (t1 == t2) {
-        return 0;
+        auto negativeFeatures = m1 == "not" ? mq1 : mq2;
+        auto positiveFeatures = m1 == "not" ? mq2 : mq1;
+
+        return negativeFeatures->every(positiveFeatures)
+          ? new MediaQueryMergeResult(true, false)
+          : new MediaQueryMergeResult(false, true);
       }
+      else if (t1.empty() || t2.empty()) {
+        return new MediaQueryMergeResult(false, true);
+      }
+
       type = m1 == "not" ? t2 : t1;
       mod = m1 == "not" ? m2 : m1;
+      features->concat(m1 == "not" ? mq2 : mq1);
     }
     else if (m1 == "not" && m2 == "not") {
       if (t1 != t2) {
-        return 0;
+        return new MediaQueryMergeResult(false, true);
       }
+
+      auto moreFeatures = mq1->length() > mq2->length() ? mq1 : mq2;
+      auto fewerFeatures = mq1->length() > mq2->length() ? mq2 : mq1;
+
+      // debug_ast(moreFeatures);
+      // debug_ast(fewerFeatures);
+
+      if (fewerFeatures->every(moreFeatures)) {
+        type = t1;
+        mod = "not";
+        features->concat(moreFeatures);
+      } else {
+        return new MediaQueryMergeResult(false, true);
+      }
+    }
+    else if (t1.empty()) {
+      mod = m2;
+      type = t2;
+      features->concat(mq1);
+      features->concat(mq2);
+    }
+    else if (t2.empty()) {
+      mod = m1;
       type = t1;
-      mod = "not";
+      features->concat(mq1);
+      features->concat(mq2);
     }
     else if (t1 != t2) {
-      return 0;
+      return new MediaQueryMergeResult(true, false);
     } else {
       type = t1;
       mod = m1.empty() ? m2 : m1;
+      features->concat(mq1);
+      features->concat(mq2);
     }
 
     Media_Query_Ptr mm = SASS_MEMORY_NEW(Media_Query,
                                          mq1->pstate(),
                                          0,
-                                         mq1->length() + mq2->length(),
+                                         features->length(),
                                          mod == "not",
                                          mod == "only");
 
@@ -593,9 +665,8 @@ namespace Sass {
       mm->media_type(SASS_MEMORY_NEW(String_Quoted, mq1->pstate(), type));
     }
 
-    mm->concat(mq2);
-    mm->concat(mq1);
+    mm->concat(features);
 
-    return mm;
+    return new MediaQuerySuccessfulMergeResult(mm);
   }
 }

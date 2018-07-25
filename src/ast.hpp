@@ -311,6 +311,20 @@ namespace Sass {
       return hash_;
     }
 
+    bool every(Vectorized* v)
+    {
+      if (v->length() < this->length()) return false;
+
+      for (T& el1 : elements_) {
+        for (size_t i = 0, L = v->length(); i < L; ++i) {
+          if (el1->hash() == (*v)[i]->hash()) break;
+          if (i == L - 1) return false;
+        }
+      }
+
+      return true;
+    }
+
     typename std::vector<T>::iterator end() { return elements_.end(); }
     typename std::vector<T>::iterator begin() { return elements_.begin(); }
     typename std::vector<T>::const_iterator end() const { return elements_.end(); }

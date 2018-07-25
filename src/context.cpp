@@ -37,6 +37,7 @@
 #include "fn_numbers.hpp"
 #include "fn_strings.hpp"
 #include "fn_selectors.hpp"
+#include "debugger.hpp"
 
 namespace Sass {
   using namespace Constants;
@@ -679,7 +680,9 @@ namespace Sass {
     // check nesting
     check_nesting(root);
     // merge and bubble certain rules
+    // debug_ast(root);
     root = cssize(root);
+    // debug_ast(root);
     // should we extend something?
     if (!subset_map.empty()) {
       // create crtp visitor object

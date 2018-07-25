@@ -10,6 +10,33 @@ namespace Sass {
 
   struct Backtrace;
 
+  class MediaQueryMergeResult {
+    bool _empty;
+    bool _unrepresentable;
+
+  public:
+    MediaQueryMergeResult(bool e, bool u)
+    : _empty(e),
+      _unrepresentable(u)
+    { }
+    ~MediaQueryMergeResult() { }
+
+    bool empty() { return this->_empty; }
+    bool unrepresentable() { return this->_unrepresentable; }
+  };
+
+  class MediaQuerySuccessfulMergeResult : public MediaQueryMergeResult {
+    Media_Query_Ptr _query;
+  public:
+    MediaQuerySuccessfulMergeResult(Media_Query_Ptr q)
+    : MediaQueryMergeResult(false, false),
+      _query(q)
+    { }
+    ~MediaQuerySuccessfulMergeResult() { }
+
+    Media_Query_Ptr query() { return this->_query; }
+  };
+
   class Cssize : public Operation_CRTP<Statement_Ptr, Cssize> {
 
     Context&                    ctx;
@@ -62,7 +89,7 @@ namespace Sass {
     bool bubblable(Statement_Ptr);
 
     List_Ptr merge_media_queries(Media_Block_Ptr, Media_Block_Ptr);
-    Media_Query_Ptr merge_media_query(Media_Query_Ptr, Media_Query_Ptr);
+    MediaQueryMergeResult* merge_media_query(Media_Query_Ptr, Media_Query_Ptr);
 
     // generic fallback
     template <typename U>
